@@ -1,103 +1,212 @@
-import Image from "next/image";
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChefHat, Calculator, TrendingUp, Users, Shield, Zap, ArrowRight, Star, CheckCircle, BarChart3, Package } from 'lucide-react'
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { data: session, status } = useSession()
+  const router = useRouter()
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (status === 'loading') return
+    if (session) {
+      router.push('/dashboard')
+    }
+  }, [session, status, router])
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (session) {
+    return null // Will redirect to dashboard
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: "var(--color-background)" }}>
+      {/* Header */}
+      <header className="backdrop-blur-md shadow-sm sticky top-0 z-50" style={{ background: "var(--color-panel-translucent)", borderBottom: "1px solid var(--gray-6)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center">
+              <div className="p-2 rounded-xl" style={{ background: "var(--accent-9)" }}>
+                <ChefHat className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="ml-3 text-2xl font-bold" style={{ color: "var(--accent-11)" }}>
+                RacikResep
+              </h1>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Link href="/auth/signin">
+                <Button variant="ghost">Masuk</Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button className="shadow-lg" style={{ background: "var(--accent-9)", color: "white" }}>
+                  Daftar Gratis
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center">
+          <div className="mb-8">
+            <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-4" style={{ background: "var(--accent-3)", color: "var(--accent-11)" }}>
+              <Star className="w-4 h-4 mr-2" />
+              Platform #1 untuk Bisnis F&B
+            </span>
+          </div>
+          <h1 className="text-5xl font-bold sm:text-6xl md:text-7xl leading-tight" style={{ color: "var(--gray-12)" }}>
+            Kelola Resep & Hitung
+            <span style={{ color: "var(--accent-11)" }}> COGS </span>
+            dengan Mudah
+          </h1>
+          <p className="mt-6 max-w-3xl mx-auto text-xl leading-relaxed" style={{ color: "var(--gray-11)" }}>
+            Platform SaaS terdepan untuk pemilik bisnis F&B. Hitung Cost of Goods Sold (COGS) secara akurat, 
+            kelola inventory, dan tentukan harga jual yang menguntungkan di berbagai platform penjualan.
+          </p>
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/auth/signup">
+              <Button className="text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center" style={{ background: "var(--accent-9)" }}>
+                Mulai Gratis Sekarang
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link href="/auth/signin">
+              <Button variant="outline" className="px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-200" style={{ borderColor: "var(--gray-7)", color: "var(--gray-12)" }}>
+                Masuk ke Akun
+              </Button>
+            </Link>
+          </div>
+          <div className="mt-12 flex items-center justify-center space-x-8 text-sm" style={{ color: "var(--gray-10)" }}>
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2" style={{ color: "var(--green-9)" }} />
+              Gratis 14 hari
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2" style={{ color: "var(--green-9)" }} />
+              Tanpa kartu kredit
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2" style={{ color: "var(--green-9)" }} />
+              Setup 5 menit
+            </div>
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="mt-20">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4" style={{ color: "var(--gray-12)" }}>
+              Semua yang Anda butuhkan untuk mengelola resep dan menghitung keuntungan
+            </h2>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: "var(--gray-11)" }}>
+              Fitur lengkap yang dirancang khusus untuk bisnis F&B modern
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader>
+                <Package className="h-8 w-8" style={{ color: "var(--blue-9)" }} />
+                <CardTitle className="text-lg">Manajemen Bahan Baku</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Kelola inventori bahan baku dengan kategorisasi dan perhitungan biaya per unit otomatis
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <ChefHat className="h-8 w-8" style={{ color: "var(--green-9)" }} />
+                <CardTitle className="text-lg">Manajemen Resep</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Buat resep dengan komposisi dinamis dan hitung COGS secara real-time
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Calculator className="h-8 w-8" style={{ color: "var(--purple-9)" }} />
+                <CardTitle className="text-lg">Simulasi Harga</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Simulasi promo dan hitung harga jual optimal untuk berbagai channel penjualan
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <BarChart3 className="h-8 w-8" style={{ color: "var(--orange-9)" }} />
+                <CardTitle className="text-lg">Dashboard & Laporan</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Monitor performa bisnis dengan dashboard interaktif dan laporan detail
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-20 rounded-2xl" style={{ background: "var(--accent-9)" }}>
+          <div className="px-6 py-12 sm:px-12 sm:py-16 lg:px-16">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-white">
+                Siap Meningkatkan Profitabilitas Bisnis Anda?
+              </h2>
+              <p className="mt-4 text-lg" style={{ color: "var(--accent-3)" }}>
+                Bergabung dengan ribuan pemilik bisnis F&B yang sudah merasakan manfaatnya
+              </p>
+              <div className="mt-8">
+                <Link href="/auth/signup">
+                  <Button size="lg" variant="secondary">
+                    Daftar Gratis Sekarang
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer */}
+      <footer style={{ background: "var(--color-panel-solid)", borderTop: "1px solid var(--gray-6)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="flex items-center justify-center">
+              <ChefHat className="h-6 w-6" style={{ color: "var(--accent-9)" }} />
+              <span className="ml-2 text-lg font-semibold" style={{ color: "var(--gray-12)" }}>RacikResep</span>
+            </div>
+            <p className="mt-2 text-sm" style={{ color: "var(--gray-11)" }}>
+              Platform SaaS untuk mengelola resep dan menghitung COGS bisnis F&B
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
-  );
+  )
 }
