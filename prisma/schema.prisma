@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,243 +8,294 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Business profile
-  business Business?
-
-  // Activity logs
+  id         String        @id @default(cuid())
+  email      String        @unique
+  password   String
+  name       String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
   activities ActivityLog[]
+  business   Business?
+  subscription Subscription?
 
   @@map("users")
 }
 
 model Business {
-  id          String  @id @default(cuid())
-  name        String
-  address     String?
-  phone       String?
-  email       String?
-  logo        String?
-  currency    String  @default("IDR")
-  language    String  @default("id")
-  theme       String  @default("light")
-  accentColor String  @default("blue")
-  
-  userId      String  @unique
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Related data
+  id              String           @id @default(cuid())
+  name            String
+  address         String?
+  phone           String?
+  email           String?
+  logo            String?
+  currency        String           @default("IDR")
+  language        String           @default("id")
+  theme           String           @default("light")
+  userId          String           @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories      Category[]
+  decimalSettings DecimalSettings? @relation("BusinessDecimalSettings")
   ingredients     Ingredient[]
   recipes         Recipe[]
-  categories      Category[]
-  units           Unit[]
   salesChannels   SalesChannel[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  skuSettings     SkuSettings?     @relation("BusinessSkuSettings")
+  units           Unit[]
+  priceHistory    IngredientPriceHistory[]
 
   @@map("businesses")
 }
 
 model Category {
-  id          String @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
-  type        String // "ingredient" or "recipe"
-  color       String @default("#6B7280")
-  
+  type        String
+  color       String       @default("#6B7280")
   businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  
-  // Relations
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   ingredients Ingredient[]
   recipes     Recipe[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@map("categories")
 }
 
 model Unit {
-  id          String @id @default(cuid())
-  name        String
-  symbol      String
-  type        String // "purchase" or "usage"
-  
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  
-  // Relations
-  ingredientsPurchase Ingredient[] @relation("PurchaseUnit")
-  ingredientsUsage    Ingredient[] @relation("UsageUnit")
+  id                  String             @id @default(cuid())
+  name                String
+  symbol              String
+  type                String
+  businessId          String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  ingredientsUsage    Ingredient[]       @relation("UsageUnit")
+  ingredientsPurchase Ingredient[]       @relation("PurchaseUnit")
   recipeIngredients   RecipeIngredient[]
   recipeYields        Recipe[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  business            Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@map("units")
 }
 
 model Ingredient {
-  id              String  @id @default(cuid())
-  name            String
-  description     String?
-  purchasePrice   Float
-  packageSize     Float
-  conversionFactor Float  @default(1) // Factor to convert purchase unit to usage unit
-  costPerUnit     Float // Auto-calculated: purchasePrice / conversionFactor
-  
-  categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
-  
-  purchaseUnitId  String
-  purchaseUnit    Unit @relation("PurchaseUnit", fields: [purchaseUnitId], references: [id])
-  
-  usageUnitId     String
-  usageUnit       Unit @relation("UsageUnit", fields: [usageUnitId], references: [id])
-  
-  businessId      String
-  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  
-  // Relations
+  id                String             @id @default(cuid())
+  sku               String?            @unique
+  name              String
+  description       String?
+  purchasePrice     Float
+  packageSize       Float
+  conversionFactor  Float              @default(1)
+  costPerUnit       Float
+  categoryId        String?
+  purchaseUnitId    String
+  usageUnitId       String
+  businessId        String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  usageUnit         Unit               @relation("UsageUnit", fields: [usageUnitId], references: [id])
+  purchaseUnit      Unit               @relation("PurchaseUnit", fields: [purchaseUnitId], references: [id])
+  category          Category?          @relation(fields: [categoryId], references: [id])
   recipeIngredients RecipeIngredient[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  priceHistory      IngredientPriceHistory[]
 
   @@map("ingredients")
 }
 
+model IngredientPriceHistory {
+  id            String     @id @default(cuid())
+  ingredientId  String
+  oldPrice      Float
+  newPrice      Float
+  priceChange   Float      // Difference between new and old price
+  percentageChange Float   // Percentage change
+  changeType    String     // "increase" or "decrease"
+  changeDate    DateTime   @default(now())
+  businessId    String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  business      Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("ingredient_price_history")
+}
+
 model Recipe {
-  id              String  @id @default(cuid())
-  name            String
-  description     String?
-  instructions    String?
-  imageUrl        String?
-  yield           Float   @default(1) // Yield amount
-  yieldUnitId     String? // Unit for yield
-  yieldUnit       Unit?   @relation(fields: [yieldUnitId], references: [id])
-  laborCost       Float   @default(0)
-  operationalCost Float   @default(0)
-  packagingCost   Float   @default(0)
-  totalCOGS       Float   @default(0) // Auto-calculated
-  cogsPerServing  Float   @default(0) // Auto-calculated
-  basePrice       Float   @default(0)
-  profitMargin    Float   @default(0) // Percentage
-  marginType      String  @default("percentage") // "percentage" or "amount"
-  sellingPrice    Float   @default(0) // Auto-calculated
-  taxRate         Float   @default(0) // Percentage
-  canBeUsedAsIngredient Boolean @default(false) // Can this recipe be used in other recipes
-  costPerUnit     Float   @default(0) // Cost per yield unit when used as ingredient
-  
-  categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
-  
-  businessId      String
-  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  
-  // Relations
-  ingredients     RecipeIngredient[]
-  subRecipes      RecipeSubRecipe[] @relation("ParentRecipe")
-  parentRecipes   RecipeSubRecipe[] @relation("SubRecipe")
-  channelPrices   ChannelPrice[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String             @id @default(cuid())
+  sku                   String?            @unique
+  name                  String
+  description           String?
+  instructions          String?
+  imageUrl              String?
+  yield                 Float              @default(1)
+  yieldUnitId           String?
+  laborCost             Float              @default(0)
+  operationalCost       Float              @default(0)
+  packagingCost         Float              @default(0)
+  totalCOGS             Float              @default(0)
+  cogsPerServing        Float              @default(0)
+  basePrice             Float              @default(0)
+  profitMargin          Float              @default(0)
+  marginType            String             @default("percentage")
+  sellingPrice          Float              @default(0)
+  taxRate               Float              @default(0)
+  canBeUsedAsIngredient Boolean            @default(false)
+  costPerUnit           Float              @default(0)
+  categoryId            String?
+  businessId            String
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  channelPrices         ChannelPrice[]
+  ingredients           RecipeIngredient[]
+  parentRecipes         RecipeSubRecipe[]  @relation("SubRecipe")
+  subRecipes            RecipeSubRecipe[]  @relation("ParentRecipe")
+  business              Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category              Category?          @relation(fields: [categoryId], references: [id])
+  yieldUnit             Unit?              @relation(fields: [yieldUnitId], references: [id])
 
   @@map("recipes")
 }
 
 model RecipeIngredient {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   quantity     Float
-  cost         Float  @default(0) // Auto-calculated
-  
+  cost         Float      @default(0)
   recipeId     String
-  recipe       Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  
   ingredientId String
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  
   unitId       String
-  unit         Unit @relation(fields: [unitId], references: [id])
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  unit         Unit       @relation(fields: [unitId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@map("recipe_ingredients")
 }
 
 model RecipeSubRecipe {
-  id            String @id @default(cuid())
-  quantity      Float  @default(1)
-  cost          Float  @default(0) // Auto-calculated
-  
+  id             String   @id @default(cuid())
+  quantity       Float    @default(1)
+  cost           Float    @default(0)
   parentRecipeId String
-  parentRecipe   Recipe @relation("ParentRecipe", fields: [parentRecipeId], references: [id], onDelete: Cascade)
-  
   subRecipeId    String
-  subRecipe      Recipe @relation("SubRecipe", fields: [subRecipeId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  subRecipe      Recipe   @relation("SubRecipe", fields: [subRecipeId], references: [id], onDelete: Cascade)
+  parentRecipe   Recipe   @relation("ParentRecipe", fields: [parentRecipeId], references: [id], onDelete: Cascade)
 
   @@map("recipe_sub_recipes")
 }
 
 model SalesChannel {
-  id          String @id @default(cuid())
-  name        String
-  commission  Float  @default(0) // Percentage
-  
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  
-  // Relations
+  id            String         @id @default(cuid())
+  name          String
+  commission    Float          @default(0)
+  businessId    String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   channelPrices ChannelPrice[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@map("sales_channels")
 }
 
 model ChannelPrice {
-  id            String @id @default(cuid())
-  price         Float
-  finalPrice    Float  @default(0) // After commission
-  
-  recipeId      String
-  recipe        Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  
-  channelId     String
-  channel       SalesChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String       @id @default(cuid())
+  price      Float
+  finalPrice Float        @default(0)
+  recipeId   String
+  channelId  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  channel    SalesChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  recipe     Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@unique([recipeId, channelId])
   @@map("channel_prices")
+}
+
+model SkuSettings {
+  id                   String   @id @default(cuid())
+  businessId           String   @unique
+  ingredientPrefix     String   @default("ING")
+  recipePrefix         String   @default("RCP")
+  numberPadding        Int      @default(3)
+  separator            String   @default("")
+  nextIngredientNumber Int      @default(1)
+  nextRecipeNumber     Int      @default(1)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  business             Business @relation("BusinessSkuSettings", fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("sku_settings")
+}
+
+model DecimalSettings {
+  id                String   @id @default(cuid())
+  businessId        String   @unique
+  decimalPlaces     Int      @default(2)
+  roundingMethod    String   @default("round")
+  thousandSeparator String   @default(",")
+  decimalSeparator  String   @default(".")
+  currencySymbol    String   @default("Rp")
+  currencyPosition  String   @default("before")
+  showTrailingZeros Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  business          Business @relation("BusinessDecimalSettings", fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("decimal_settings")
 }
 
 model ActivityLog {
   id          String   @id @default(cuid())
   action      String
   description String
-  entityType  String?  // "ingredient", "recipe", etc.
+  entityType  String?
   entityId    String?
-  
   userId      String
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activity_logs")
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  planId            String
+  status            String   @default("trial") // trial, active, cancelled, expired
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialStart        DateTime?
+  trialEnd          DateTime?
+  cancelAtPeriodEnd Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              Plan     @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  price       Float
+  currency    String   @default("IDR")
+  interval    String   @default("month") // month, year
+  features    String   // JSON string of features
+  maxUsers    Int      @default(1)
+  maxRecipes  Int      @default(100)
+  maxIngredients Int   @default(500)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  subscriptions Subscription[]
+
+  @@map("plans")
 }

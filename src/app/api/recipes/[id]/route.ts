@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateSku } from '@/lib/sku'
 
 export async function PUT(
   request: NextRequest,
@@ -31,6 +32,7 @@ export async function PUT(
     }
 
     const {
+      sku,
       name,
       description,
       instructions,
@@ -40,9 +42,6 @@ export async function PUT(
       laborCost,
       operationalCost,
       packagingCost,
-      profitMargin,
-      marginType,
-      sellingPrice,
       canBeUsedAsIngredient,
       categoryId,
       ingredients,
@@ -104,7 +103,9 @@ export async function PUT(
           )
         }
 
-        const cost = subRecipe.costPerUnit * subRec.quantity
+        // Use cogsPerServing to allow any recipe to be used as a sub-recipe
+        const unitCost = subRecipe.cogsPerServing || 0
+        const cost = unitCost * subRec.quantity
         subRecipesCost += cost
 
         recipeSubRecipes.push({
@@ -120,6 +121,25 @@ export async function PUT(
     const cogsPerServing = totalCOGS / recipeYield
     const costPerUnit = canBeUsedAsIngredient ? cogsPerServing : 0
 
+    // Handle SKU - if empty and recipe doesn't have one, generate it
+    let finalSku = sku
+    if ((!sku || sku.trim() === '') && !existingRecipe.sku) {
+      try {
+        finalSku = await generateSku('recipe', businessId)
+        console.log('PUT /api/recipes/[id] - Generated SKU:', finalSku)
+      } catch (skuError) {
+        console.error('PUT /api/recipes/[id] - Error generating SKU:', skuError)
+        // Continue without SKU if generation fails
+        finalSku = null
+      }
+    } else if (sku && sku.trim() !== '') {
+      // Use provided SKU
+      finalSku = sku
+    } else {
+      // Keep existing SKU
+      finalSku = existingRecipe.sku
+    }
+
     // Update recipe in transaction
     const recipe = await prisma.$transaction(async (tx) => {
       // Delete existing ingredients and sub-recipes
@@ -134,6 +154,7 @@ export async function PUT(
       return await tx.recipe.update({
         where: { id: recipeId },
         data: {
+          sku: finalSku,
           name,
           description,
           instructions,
@@ -143,9 +164,6 @@ export async function PUT(
           laborCost,
           operationalCost,
           packagingCost,
-          profitMargin,
-          marginType,
-          sellingPrice,
           canBeUsedAsIngredient,
           costPerUnit,
           totalCOGS,

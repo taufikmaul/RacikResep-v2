@@ -1,37 +1,26 @@
 'use client'
 
-import { Theme } from '@radix-ui/themes'
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
-import { useTheme } from '@/hooks/useTheme'
+import { Theme } from '@radix-ui/themes'
+import { useEffect } from 'react'
 
 interface RadixThemeProviderProps {
   children: React.ReactNode
 }
 
 function ThemeWrapper({ children }: { children: React.ReactNode }) {
-  const { accentColor, loading } = useTheme()
-  
-  if (loading) {
-    return (
-      <Theme 
-        panelBackground="solid"
-        scaling="100%"
-        radius="medium"
-        accentColor="blue"
-        grayColor="slate"
-      >
-        {children}
-      </Theme>
-    )
-  }
+  useEffect(() => {
+    // Clean up any existing accent color from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('business-accent-color')
+    }
+  }, [])
 
   return (
     <Theme 
-      panelBackground="solid"
+      grayColor="gray" 
+      panelBackground="solid" 
       scaling="100%"
-      radius="medium"
-      accentColor={accentColor as any}
-      grayColor="slate"
     >
       {children}
     </Theme>
@@ -46,9 +35,7 @@ export function RadixThemeProvider({ children }: RadixThemeProviderProps) {
       enableSystem
       disableTransitionOnChange
     >
-      <ThemeWrapper>
-        {children}
-      </ThemeWrapper>
+      <ThemeWrapper>{children}</ThemeWrapper>
     </NextThemesProvider>
   )
 }

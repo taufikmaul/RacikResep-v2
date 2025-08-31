@@ -87,8 +87,8 @@ export default function SignUp() {
         
         <Card className="shadow-xl border-0 backdrop-blur-sm" style={{ background: "var(--color-panel-translucent)" }}>
           <CardHeader className="text-center pb-8">
-            <CardTitle className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>Buat Akun Baru</CardTitle>
-            <CardDescription className="mt-2" style={{ color: "var(--gray-11)" }}>
+            <CardTitle className="text-2xl font-bold">Buat Akun Baru</CardTitle>
+            <CardDescription className="mt-2">
               Daftar untuk mulai mengelola resep dan menghitung COGS
             </CardDescription>
           </CardHeader>

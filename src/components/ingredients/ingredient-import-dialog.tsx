@@ -18,6 +18,7 @@ export function IngredientImportDialog({ isOpen, onClose, onImported }: Ingredie
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -79,9 +80,24 @@ export function IngredientImportDialog({ isOpen, onClose, onImported }: Ingredie
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Bahan dari CSV" size="lg">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Import Bahan dari CSV" 
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="flex-1 h-10">
+            Batal
+          </Button>
+          <Button type="button" onClick={() => formRef.current?.requestSubmit()} disabled={loading || !file} className="flex-1 h-10 flex items-center justify-center gap-2">
+            {loading ? (<><Loader2 className="h-4 w-4 animate-spin" /> Mengimpor...</>) : (<><Upload className="h-4 w-4" /> Import CSV</>)}
+          </Button>
+        </>
+      }
+    >
       <div className="p-6" style={{ background: 'var(--color-panel-solid)' }}>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div>
             <p className="text-sm mb-2" style={{ color: 'var(--gray-12)' }}>
             Unduh contoh <a href="/api/ingredients/template" className="text-sm" style={{ color: 'var(--accent-11)' }}>template CSV</a> untuk melihat format yang diperlukan.
@@ -123,14 +139,7 @@ export function IngredientImportDialog({ isOpen, onClose, onImported }: Ingredie
             )}
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="flex-1 h-10">
-              Batal
-            </Button>
-            <Button type="submit" disabled={loading || !file} className="flex-1 h-10 flex items-center justify-center gap-2">
-              {loading ? (<><Loader2 className="h-4 w-4 animate-spin" /> Mengimpor...</>) : (<><Upload className="h-4 w-4" /> Import CSV</>)}
-            </Button>
-          </div>
+
         </form>
       </div>
     </Modal>

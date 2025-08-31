@@ -60,8 +60,8 @@ export default function SignIn() {
         
         <Card className="shadow-xl border-0 backdrop-blur-sm" style={{ background: "var(--color-panel-translucent)" }}>
           <CardHeader className="text-center pb-8">
-            <CardTitle className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>Masuk ke Akun Anda</CardTitle>
-            <CardDescription className="mt-2" style={{ color: "var(--gray-11)" }}>
+            <CardTitle className="text-2xl font-bold">Masuk ke Akun Anda</CardTitle>
+            <CardDescription className="mt-2">
               Masukkan email dan password untuk mengakses dashboard
             </CardDescription>
           </CardHeader>

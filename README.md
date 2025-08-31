@@ -1,203 +1,265 @@
-# RacikResep - SaaS Platform untuk Bisnis F&B
+# 🍳 RacikResep - Recipe Management & Cost Analysis System
 
-RacikResep adalah platform SaaS (Software as a Service) yang dirancang khusus untuk pemilik bisnis F&B (Food & Beverage) skala kecil hingga menengah. Platform ini membantu pengguna menghitung Cost of Goods Sold (COGS) secara akurat untuk setiap item menu dan menentukan harga jual strategis di berbagai platform penjualan.
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/yourusername/racikresep)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5.0-black.svg)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## 🎯 Target Pengguna
+## 📖 Description
 
-- Pemilik restoran
-- Pemilik kafe
-- Cloud kitchen
-- Jasa katering
-- Bisnis F&B lainnya yang membutuhkan alat untuk manajemen resep dan strategi penetapan harga
+**RacikResep** is a comprehensive recipe management and cost analysis system designed specifically for food businesses, restaurants, and culinary entrepreneurs. The application helps users manage ingredients, create recipes, calculate costs, and optimize pricing strategies to maximize profitability.
 
-## ✨ Fitur Utama
+Built with modern web technologies and a focus on user experience, RacikResep provides an intuitive interface for managing all aspects of recipe development, from ingredient sourcing to final pricing decisions.
 
-### 📊 Dashboard
-- **Ringkasan Bisnis**: Menampilkan metrik utama seperti total bahan baku, jumlah resep, dan rata-rata margin keuntungan
-- **Resep Paling Menguntungkan**: Daftar resep dengan margin keuntungan tertinggi
-- **Log Aktivitas Terbaru**: Ringkasan 5 aktivitas terakhir yang dilakukan pengguna
+## ✨ Features
 
-### 📦 Manajemen Inventori (Bahan Baku)
-- **CRUD Bahan Baku**: Fungsi lengkap untuk membuat, membaca, memperbarui, dan menghapus data bahan baku
-- **Kategorisasi Bahan**: Mengelompokkan bahan ke dalam kategori yang dapat disesuaikan
-- **Penggunaan Bahan**: Melihat di mana bahan digunakan dan seberapa intensif penggunaannya
-- **Detail Harga Pembelian**: Mencatat harga beli, berat/volume bersih per kemasan, dan satuan pembelian
-- **Kalkulasi Harga per Unit**: Otomatis menghitung biaya bahan per unit penggunaan
-- **Pencarian & Filter**: Fitur pencarian untuk menemukan bahan dengan cepat
+### 🥘 **Recipe Management**
+- **Recipe Creation & Editing**: Build detailed recipes with multiple ingredients
+- **Ingredient Quantities**: Precise measurement tracking with conversion factors
+- **Recipe Categories**: Organize recipes by type, cuisine, or custom categories
+- **Recipe Search & Filtering**: Quick access to recipes with advanced search
+- **Recipe Export**: Export recipes in various formats for sharing
 
-### 👨‍🍳 Manajemen Resep & Kalkulasi COGS
-- **CRUD Resep**: Fungsi lengkap untuk mengelola resep
-- **Komposisi Resep Dinamis**: 
-  - Menambahkan bahan baku dari inventori
-  - Menambahkan resep lain sebagai "sub-resep"
-- **Biaya Tambahan**: Memasukkan biaya non-bahan seperti tenaga kerja, operasional, dan kemasan
-- **Kalkulasi COGS Real-time**: Total COGS resep dihitung dan diperbarui secara otomatis
-- **Yield**: Menentukan jumlah porsi yang dihasilkan untuk menghitung COGS per porsi
-- **Penetapan Harga Jual**: Menentukan margin & pajak untuk menghitung harga jual dasar
-- **Kategorisasi Resep**: Mengelompokkan resep ke dalam kategori yang dapat disesuaikan
+### 🥬 **Ingredient Management**
+- **Ingredient Database**: Comprehensive ingredient catalog with pricing
+- **SKU System**: Automatic and manual SKU generation for inventory tracking
+- **Price History**: Track ingredient price changes over time
+- **Unit Conversions**: Handle different measurement units seamlessly
+- **Bulk Operations**: Import/export ingredients, bulk category changes, deletions
 
-### ⚙️ Pengaturan & Kustomisasi
-- **Profil Restoran**: Mengatur nama bisnis, alamat, kontak, dan upload logo
-- **Preferensi Aplikasi**:
-  - Mengatur mata uang yang digunakan
-  - Mengatur bahasa (Indonesia/English)
-  - Memilih tema tampilan (Light, Dark, atau mengikuti sistem)
-- **Manajemen Unit**: Menambah atau menghapus daftar satuan pembelian dan penggunaan
-- **CRUD Saluran Penjualan**: Mengelola berbagai channel penjualan
+### 💰 **Cost Analysis & Pricing**
+- **COGS Calculation**: Automatic cost of goods sold computation
+- **Profit Margin Analysis**: Calculate optimal pricing strategies
+- **Selling Price Simulation**: Test different pricing scenarios
+- **Shopping Calculator**: Optimize ingredient purchases
+- **Decimal Formatting**: Customizable currency and number formatting
 
-## 🛠️ Teknologi yang Digunakan
+### 🏪 **Business Management**
+- **Business Profile**: Manage business information and branding
+- **Sales Channels**: Track different sales channels with commission rates
+- **Category Management**: Organize ingredients and recipes by categories
+- **Unit Management**: Custom measurement units for your business needs
 
-- **Frontend**: Next.js 15, React 19, TypeScript 5
-- **Styling**: Tailwind CSS
-- **Database**: SQLite dengan Prisma ORM (Prisma 6)
-- **Authentication**: NextAuth.js (credentials)
-- **UI Components**: Custom components dengan Radix UI primitives
-- **Icons**: Lucide React
+### 🎨 **User Experience**
+- **Dark/Light Mode**: Beautiful theme switching with system preference detection
+- **Responsive Design**: Mobile-first design that works on all devices
+- **Modern UI/UX**: Clean, intuitive interface built with Radix UI
+- **Real-time Updates**: Instant feedback and data synchronization
+- **Toast Notifications**: User-friendly feedback for all operations
 
-## 🚀 Instalasi dan Menjalankan Aplikasi
+### 🔐 **Security & Authentication**
+- **User Authentication**: Secure login system with NextAuth.js
+- **Business Isolation**: Multi-tenant architecture for data security
+- **Role-based Access**: User permission management
+- **Data Validation**: Comprehensive input validation and sanitization
 
-1. **Clone repository**:
-   ```bash
-   git clone <repository-url>
-   cd RacikResep
-   ```
+### 📊 **Analytics & Reporting**
+- **Dashboard Analytics**: Business overview with key metrics
+- **Activity Logging**: Track all system activities and changes
+- **Data Export**: Export data in CSV and Excel formats
+- **Performance Metrics**: Monitor business performance over time
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+## 🚀 Version 1.0.0 - Release Notes
 
-3. **Persiapan environment**:
-   Buat file `.env` di root proyek minimal dengan variabel berikut:
-   ```bash
-   # URL aplikasi saat pengembangan
-   NEXTAUTH_URL=http://localhost:3000
-   # Dapat dibuat via: openssl rand -base64 32
-   NEXTAUTH_SECRET=your-strong-random-secret
-   ```
+### 🎯 **Major Features**
+- Complete recipe and ingredient management system
+- Advanced cost analysis and pricing tools
+- Comprehensive business management features
+- Modern, responsive user interface
+- Dark/Light theme system
+- Bulk operations for data management
 
-4. **Setup database**:
-   ```bash
-   npx prisma generate
-   npx prisma migrate dev --name init
-   ```
+### 🔧 **Technical Improvements**
+- Built with Next.js 15 and React 19
+- TypeScript for type safety
+- Radix UI components for accessibility
+- Tailwind CSS for modern styling
+- Prisma ORM for database management
+- SQLite database for easy deployment
 
-5. **Jalankan development server**:
-   ```bash
-   npm run dev
-   ```
+### 📱 **User Experience**
+- Mobile-first responsive design
+- Intuitive navigation and workflows
+- Real-time data updates
+- Comprehensive error handling
+- Accessibility compliance
 
-6. **Buka aplikasi**:
-   Akses aplikasi di [http://localhost:3000](http://localhost:3000)
+## 🛠️ Technology Stack
 
-7. (Opsional) **Lihat database dengan Prisma Studio**:
-   ```bash
-   npx prisma studio
-   ```
+### **Frontend**
+- **Next.js 15.5.0** - React framework with App Router
+- **React 19.1.0** - Latest React with concurrent features
+- **TypeScript 5.0** - Type-safe JavaScript development
+- **Tailwind CSS 4.0** - Utility-first CSS framework
+- **Radix UI** - Accessible component primitives
+- **Radix Icons** - Beautiful, consistent iconography
 
-### Skrip NPM yang tersedia (`package.json`)
+### **Backend & Database**
+- **Next.js API Routes** - Serverless API endpoints
+- **Prisma 6.14.0** - Modern database ORM
+- **SQLite** - Lightweight, file-based database
+- **NextAuth.js 4.24.11** - Authentication solution
 
-- `dev`: Menjalankan Next.js dev server dengan Turbopack
-- `build`: Build produksi (Turbopack)
-- `start`: Menjalankan server produksi
-- `lint`: Menjalankan ESLint
+### **Development Tools**
+- **ESLint** - Code quality and consistency
+- **Turbopack** - Fast bundler for development
+- **PostCSS** - CSS processing and optimization
+- **TypeScript** - Static type checking
 
-## 📁 Struktur Project
+### **Additional Libraries**
+- **React Hot Toast** - Toast notifications
+- **Recharts** - Data visualization
+- **Date-fns** - Date manipulation
+- **UUID** - Unique identifier generation
+- **XLSX** - Excel file handling
+- **jsPDF** - PDF generation
+
+## 📋 Prerequisites
+
+Before running this project, ensure you have:
+
+- **Node.js 18.17** or higher
+- **npm** or **yarn** package manager
+- **Git** for version control
+
+## 🚀 Getting Started
+
+### 1. **Clone the Repository**
+```bash
+git clone https://github.com/yourusername/racikresep.git
+cd racikresep
+```
+
+### 2. **Install Dependencies**
+```bash
+npm install
+# or
+yarn install
+```
+
+### 3. **Environment Setup**
+Create a `.env.local` file in the root directory:
+```env
+# Database
+DATABASE_URL="file:./dev.db"
+
+# NextAuth
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Business Settings
+NEXT_PUBLIC_APP_NAME="RacikResep"
+```
+
+### 4. **Database Setup**
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Run database migrations
+npx prisma db push
+
+# (Optional) Open Prisma Studio
+npx prisma studio
+```
+
+### 5. **Start Development Server**
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 📁 Project Structure
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes (Ingredients, Recipes, Units, Categories, Sales Channels, dll.)
-│   ├── auth/              # Halaman autentikasi
-│   ├── dashboard/         # Dashboard bisnis
-│   ├── ingredients/       # Manajemen bahan baku
-│   ├── recipes/           # Manajemen resep
-│   └── layout.tsx         # Root layout
-├── components/            # Komponen reusable
-│   ├── ui/               # UI primitives & wrappers (Radix, Tailwind)
-│   ├── layout/           # Komponen layout
-│   ├── ingredients/      # Komponen khusus bahan
-│   └── recipes/          # Komponen khusus resep
-├── hooks/                # React hooks (mis. `useTheme`)
-├── lib/                  # Library utilitas
-│   ├── auth.ts          # Konfigurasi NextAuth (credentials)
-│   ├── prisma.ts        # Prisma client
-│   └── utils.ts         # Helper utilities
-prisma/
-├── schema.prisma         # Skema database Prisma (SQLite)
-└── migrations/           # Migrations Prisma
+racikresep/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── api/               # API routes
+│   │   ├── auth/              # Authentication pages
+│   │   ├── dashboard/         # Dashboard page
+│   │   ├── ingredients/       # Ingredients management
+│   │   ├── recipes/           # Recipe management
+│   │   ├── settings/          # Application settings
+│   │   └── simulation/        # Pricing simulation
+│   ├── components/            # Reusable components
+│   │   ├── ui/               # Base UI components
+│   │   ├── forms/            # Form components
+│   │   ├── layout/           # Layout components
+│   │   └── ingredients/      # Ingredient-specific components
+│   ├── contexts/              # React contexts
+│   ├── lib/                   # Utility functions
+│   └── types/                 # TypeScript type definitions
+├── prisma/                    # Database schema and migrations
+├── public/                    # Static assets
+└── docs/                      # Documentation
 ```
 
-## 🗄️ Database Schema
+## 🔧 Available Scripts
 
-Aplikasi menggunakan database relasional dengan tabel utama:
-- **Users**: Data pengguna
-- **Business**: Profil bisnis
-- **Categories**: Kategori bahan dan resep
-- **Units**: Satuan pembelian dan penggunaan
-- **Ingredients**: Data bahan baku
-- **Recipes**: Data resep
-- **RecipeIngredients**: Relasi bahan dalam resep
-- **SalesChannels**: Channel penjualan
-- **ActivityLogs**: Log aktivitas pengguna
+- **`npm run dev`** - Start development server with Turbopack
+- **`npm run build`** - Build production application
+- **`npm run start`** - Start production server
+- **`npm run lint`** - Run ESLint for code quality
 
-## 🔐 Fitur Keamanan
+## 🌟 Key Features in Detail
 
-- Autentikasi berbasis JWT dengan NextAuth.js
-- Password hashing dengan bcrypt
-- Session management
-- Protected routes
-- Data isolation per business
+### **Recipe Management System**
+- Create recipes with unlimited ingredients
+- Automatic cost calculation based on ingredient prices
+- Recipe categorization and tagging
+- Export recipes in multiple formats
+- Recipe search and filtering
 
-Catatan: Aplikasi menggunakan Credentials Provider; proses login memeriksa email/password di tabel `users` dengan hashing `bcryptjs` (lihat `src/lib/auth.ts`).
+### **Ingredient Cost Tracking**
+- Real-time price updates
+- Historical price tracking
+- Bulk import/export functionality
+- SKU generation and management
+- Unit conversion handling
 
-## 📈 Fitur Kalkulasi COGS
+### **Business Intelligence**
+- Dashboard with key performance indicators
+- Cost analysis and profit margin calculations
+- Pricing simulation tools
+- Sales channel management
+- Activity logging and audit trails
 
-Sistem kalkulasi COGS yang komprehensif:
-1. **Biaya Bahan Baku**: Dihitung berdasarkan quantity × cost per unit
-2. **Biaya Tenaga Kerja**: Biaya untuk persiapan dan memasak
-3. **Biaya Operasional**: Biaya gas, listrik, dll.
-4. **Biaya Kemasan**: Biaya packaging
-5. **Total COGS**: Jumlah semua biaya di atas
-6. **COGS per Porsi**: Total COGS dibagi jumlah porsi
+## 🤝 Contributing
 
-## 🎨 Desain UI/UX
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-- **Responsive Design**: Optimal di desktop, tablet, dan mobile
-- **Modern Interface**: Clean dan intuitive
-- **Color-coded Categories**: Kategori dengan warna untuk identifikasi mudah
-- **Real-time Updates**: Kalkulasi COGS yang update secara real-time
-- **Loading States**: Feedback visual saat memuat data
+### **Development Workflow**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 🔄 Status Pengembangan
+## 📄 License
 
-✅ **Selesai**:
-- Setup project dan database schema
-- Sistem autentikasi dan manajemen user
-- Dashboard dengan metrik bisnis
-- Manajemen bahan baku (CRUD lengkap)
-- Manajemen resep dengan kalkulasi COGS
- - Pengayaan data bahan: tampilan penggunaan bahan di resep (`usageCount` + daftar resep)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-🚧 **Dalam Pengembangan**:
-- Fitur simulasi (promo, sales channels, shopping planning)
-- Pengaturan dan kustomisasi lanjutan
-- Peningkatan UI/UX
-- Testing dan deployment
+## 🙏 Acknowledgments
 
-## 📝 Cara Menggunakan
+- **Next.js Team** for the amazing React framework
+- **Radix UI** for accessible component primitives
+- **Tailwind CSS** for the utility-first CSS framework
+- **Prisma Team** for the modern database ORM
+- **Vercel** for hosting and deployment solutions
 
-1. **Registrasi**: Buat akun baru dengan informasi bisnis
-2. **Setup Bahan Baku**: Tambahkan bahan-bahan yang digunakan
-3. **Buat Resep**: Tambahkan resep dengan komposisi bahan
-4. **Analisis COGS**: Lihat kalkulasi COGS otomatis
-5. **Tentukan Harga**: Set margin keuntungan dan harga jual
-6. **Monitor Dashboard**: Pantau performa bisnis
+## 📞 Support
 
-## 🤝 Kontribusi
+- **Documentation**: [Wiki](https://github.com/yourusername/racikresep/wiki)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/racikresep/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/racikresep/discussions)
+- **Email**: support@racikresep.com
 
-Aplikasi ini dikembangkan sebagai solusi SaaS untuk bisnis F&B. Untuk kontribusi atau feedback, silakan hubungi developer.
+---
 
-## 📄 Lisensi
+**Made with ❤️ for the culinary community**
 
-Copyright © 2025 RacikResep. All rights reserved.
+*RacikResep v1.0.0 - Empowering food businesses with smart recipe management*

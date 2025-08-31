@@ -4,47 +4,19 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { Card, Theme } from '@radix-ui/themes'
 import { X } from 'lucide-react'
 import { Button } from './button'
-import { useTheme } from '@/hooks/useTheme'
+import { DialogFooter } from './dialog-footer'
+import { useRef, useEffect, useState } from 'react'
 
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
   title: string
   children: React.ReactNode
+  footer?: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 }
 
-function DynamicTheme({ children }: { children: React.ReactNode }) {
-  const { accentColor, loading } = useTheme()
-  
-  if (loading) {
-    return (
-      <Theme 
-        panelBackground="solid"
-        scaling="100%"
-        radius="medium"
-        accentColor="blue"
-        grayColor="slate"
-      >
-        {children}
-      </Theme>
-    )
-  }
-
-  return (
-    <Theme 
-      panelBackground="solid"
-      scaling="100%"
-      radius="medium"
-      accentColor={accentColor as any}
-      grayColor="slate"
-    >
-      {children}
-    </Theme>
-  )
-}
-
-export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -53,23 +25,67 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     '2xl': 'max-w-6xl'
   }
 
+  const headerRef = useRef<HTMLDivElement>(null)
+  const footerRef = useRef<HTMLDivElement>(null)
+  const [contentHeight, setContentHeight] = useState<string>('calc(100% - 80px)')
+
+  useEffect(() => {
+    if (isOpen) {
+      const updateContentHeight = () => {
+        const headerHeight = headerRef.current?.offsetHeight || 80
+        const footerHeight = footer ? (footerRef.current?.offsetHeight || 80) : 0
+        const newHeight = `calc(100% - ${headerHeight}px - ${footerHeight}px)`
+        setContentHeight(newHeight)
+      }
+
+      // Update height after a short delay to ensure DOM is rendered
+      const timer = setTimeout(updateContentHeight, 100)
+      
+      // Also update on window resize
+      window.addEventListener('resize', updateContentHeight)
+      
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('resize', updateContentHeight)
+      }
+    }
+  }, [isOpen, footer])
+
+
+
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
-        <DynamicTheme>
-          <Dialog.Overlay style={{ background: "var(--color-overlay)" }} className="fixed inset-0 z-50 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <Dialog.Content style={{ background: "var(--color-panel-solid)" }} className={`fixed left-[50%] top-[50%] z-50 w-full ${sizeClasses[size]} max-h-[90vh] translate-x-[-50%] translate-y-[-50%] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]`}>
-            <Card className="h-full overflow-hidden">
+        <Theme 
+          panelBackground="solid"
+          scaling="90%"
+          radius="medium"
+          grayColor="slate"
+        >
+          <Dialog.Overlay 
+            style={{ background: "rgba(0, 0, 0, 0.6)" }} 
+            className="fixed inset-0 z-50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-300 data-[state=open]:fade-in-300 duration-300" 
+          />
+          <Dialog.Content 
+            style={{ 
+              background: "var(--color-panel-solid)"
+            }} 
+            className={`fixed left-[50%] top-[50%] z-50 w-full ${sizeClasses[size]} translate-x-[-50%] translate-y-[-50%] duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-300 data-[state=open]:fade-in-300 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] shadow-2xl`}
+          >
+            <Card className="h-full overflow-hidden [&.rt-r-size-1]:!rt-r-size-0 flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-6" style={{ borderBottom: "1px solid var(--gray-6)" }}>
-                <Dialog.Title className="text-xl font-semibold" style={{ color: "var(--gray-12)" }}>
+              <div 
+                ref={headerRef}
+                className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 flex-shrink-0"
+              >
+                <Dialog.Title className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   {title}
                 </Dialog.Title>
                 <Dialog.Close asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 transition-all duration-200 rounded-full"
                   >
                     <X className="h-4 w-4" />
                     <span className="sr-only">Close</span>
@@ -78,12 +94,27 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
               </div>
               
               {/* Content */}
-              <div className="max-h-[calc(90vh-80px)] overflow-y-auto">
+              <div 
+                className="overflow-y-auto bg-white min-h-0"
+                style={{
+                  height: contentHeight,
+                  maxHeight: contentHeight
+                }}
+              >
                 {children}
               </div>
+              
+              {/* Footer */}
+              {footer && (
+                <div ref={footerRef}>
+                  <DialogFooter>
+                    {footer}
+                  </DialogFooter>
+                </div>
+              )}
             </Card>
           </Dialog.Content>
-        </DynamicTheme>
+        </Theme>
       </Dialog.Portal>
     </Dialog.Root>
   )

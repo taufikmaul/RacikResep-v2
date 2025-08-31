@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         const purchaseUnit = await findUnit(purchaseUnitName, purchaseUnitSymbol, 'purchase')
         const usageUnit = await findUnit(usageUnitName, usageUnitSymbol, 'usage')
 
-        const costPerUnit = purchasePrice / conversionFactor
+        const costPerUnit = purchasePrice / (packageSize * conversionFactor)
 
         // Upsert by name within business
         const existing = await prisma.ingredient.findFirst({ where: { businessId, name } })

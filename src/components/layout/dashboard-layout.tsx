@@ -5,9 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { AppSidebar } from './sidebar'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { PanelLeftOpen, PanelLeftClose, ChevronRight } from 'lucide-react'
+import { HamburgerMenuIcon, Cross1Icon, ChevronRightIcon } from '@radix-ui/react-icons'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { BottomNav } from './bottom-nav'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -97,7 +98,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               className="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-md"
               style={{ border: '1px solid var(--gray-6)', color: 'var(--gray-11)' }}
             >
-              {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              {collapsed ? <HamburgerMenuIcon className="h-4 w-4" /> : <Cross1Icon className="h-4 w-4" />}
             </button>
 
             {/* Mobile business info (logo, name, tagline) */}
@@ -122,13 +123,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 truncate">
               {breadcrumbs.map((b, i) => (
                 <div key={b.href} className="flex items-center gap-2">
-                  {i > 0 && <ChevronRight className="h-3.5 w-3.5" style={{ color: 'var(--gray-9)' }} />}
+                  {i > 0 && <ChevronRightIcon className="h-3.5 w-3.5" style={{ color: 'var(--gray-9)' }} />}
                   <span className={`text-sm ${i === breadcrumbs.length - 1 ? 'font-semibold' : ''}`} style={{ color: i === breadcrumbs.length - 1 ? 'var(--gray-12)' : 'var(--gray-11)' }}>
                     {b.label}
                   </span>
                 </div>
               ))}
             </nav>
+
+            {/* Theme Toggle */}
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </div>
             <ScrollArea className="flex-1" style={{ background: "var(--color-background)" }}>
               <div className="p-4 sm:p-6 pb-24 sm:pb-6">

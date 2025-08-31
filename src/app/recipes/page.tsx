@@ -5,12 +5,17 @@ import { useSession } from 'next-auth/react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column, PaginationInfo } from '@/components/ui/data-table'
+import { BulkActions } from '@/components/ui/bulk-actions'
 import { Plus, Edit, Trash2, ChefHat, Calculator } from 'lucide-react'
 import { ImagePreview } from '@/components/ui/image-preview'
 import { RecipeDialog } from '@/components/recipes/recipe-dialog'
+import { useDecimalSettings } from '@/hooks/useDecimalSettings'
+import { formatCurrency } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface Recipe {
   id: string
+  sku?: string
   name: string
   description?: string
   instructions?: string
@@ -66,6 +71,7 @@ interface Recipe {
 
 export default function RecipesPage() {
   const { data: session } = useSession()
+  const { settings: decimalSettings } = useDecimalSettings()
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -82,6 +88,8 @@ export default function RecipesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string }>>([])
 
   const fetchRecipes = async () => {
     try {
@@ -106,9 +114,22 @@ export default function RecipesPage() {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      if (response.ok) {
+        const result = await response.json()
+        setCategories(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
   useEffect(() => {
     if (session) {
       fetchRecipes()
+      fetchCategories()
     }
   }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm])
 
@@ -147,6 +168,7 @@ export default function RecipesPage() {
     if (!recipe) return undefined
     return {
       id: recipe.id,
+      sku: recipe.sku || '',
       name: recipe.name,
       imageUrl: recipe.imageUrl,
       description: recipe.description,
@@ -192,6 +214,73 @@ export default function RecipesPage() {
 
   const handlePageChange = (page: number) => {
     setPagination(prev => ({ ...prev, page }))
+  }
+
+  const handleBulkDelete = async (ids: string[]) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${ids.length} resep yang dipilih?`)) return
+
+    try {
+      const response = await fetch('/api/recipes/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setRecipes(recipes.filter(recipe => !ids.includes(recipe.id)))
+        setSelectedItems([])
+        // Refresh data if current page becomes empty
+        if (recipes.length <= ids.length && pagination.page > 1) {
+          setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+        }
+        toast.success(result.message)
+      } else {
+        const error = await response.json()
+        toast.error(`Gagal menghapus resep: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk deleting recipes:', error)
+      toast.error('Gagal menghapus resep yang dipilih')
+    }
+  }
+
+  const handleBulkExport = async (ids: string[]) => {
+    try {
+      const params = new URLSearchParams({ ids: ids.join(',') })
+      window.open(`/api/recipes/export?${params}`, '_blank')
+    } catch (error) {
+      console.error('Error bulk exporting recipes:', error)
+      alert('Gagal export resep yang dipilih')
+    }
+  }
+
+  const handleBulkCategoryChange = async (ids: string[], categoryId: string) => {
+    try {
+      const response = await fetch('/api/recipes/bulk-category', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, categoryId })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        // Update local state
+        setRecipes(recipes.map(recipe => 
+          ids.includes(recipe.id) 
+            ? { ...recipe, categoryId, category: categories.find(c => c.id === categoryId) }
+            : recipe
+        ))
+        setSelectedItems([])
+        toast.success(result.message)
+      } else {
+        const error = await response.json()
+        toast.error(`Gagal mengubah kategori: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk changing categories:', error)
+      toast.error('Gagal mengubah kategori resep yang dipilih')
+    }
   }
 
   const handleLimitChange = (limit: number) => {
@@ -271,6 +360,11 @@ export default function RecipesPage() {
             {recipe.description && (
               <div className="text-sm text-gray-500">{recipe.description}</div>
             )}
+            {recipe.sku && (
+              <div className="text-xs text-gray-600 mt-1">
+                SKU: <span className="font-mono">{recipe.sku}</span>
+              </div>
+            )}
             {recipe.category && (
               <span 
                 className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white mt-1"
@@ -280,6 +374,22 @@ export default function RecipesPage() {
               </span>
             )}
           </div>
+        </div>
+      )
+    },
+    {
+      key: 'sku',
+      header: 'SKU',
+      sortable: true,
+      render: (recipe) => (
+        <div className="text-sm">
+          {recipe.sku ? (
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-mono bg-gray-100 text-gray-700">
+              {recipe.sku}
+            </span>
+          ) : (
+            <span className="text-sm text-gray-500">-</span>
+          )}
         </div>
       )
     },
@@ -304,32 +414,16 @@ export default function RecipesPage() {
       sortable: true,
       render: (recipe) => (
         <div className="text-sm">
-          <div className="font-medium text-blue-900">
-            Rp {recipe.cogsPerServing.toLocaleString('id-ID')}
-          </div>
-          <div className="text-blue-600 text-xs">
-            Total: Rp {recipe.totalCOGS.toLocaleString('id-ID')}
-          </div>
+                      <div className="font-medium text-blue-900">
+              {decimalSettings ? formatCurrency(recipe.cogsPerServing, decimalSettings) : `Rp ${recipe.cogsPerServing.toLocaleString('id-ID')}`}
+            </div>
+            <div className="text-blue-600 text-xs">
+              Total: {decimalSettings ? formatCurrency(recipe.totalCOGS, decimalSettings) : `Rp ${recipe.totalCOGS.toLocaleString('id-ID')}`}
+            </div>
         </div>
       )
     },
-    {
-      key: 'sellingPrice',
-      header: 'Harga Jual',
-      sortable: true,
-      render: (recipe) => recipe.sellingPrice ? (
-        <div className="text-sm">
-          <div className="font-medium text-green-900">
-            Rp {recipe.sellingPrice.toLocaleString('id-ID')}
-          </div>
-          <div className="text-green-600 text-xs">
-            Margin: {recipe.profitMargin}% 
-          </div>
-        </div>
-      ) : (
-        <span className="text-sm text-gray-500">-</span>
-      )
-    },
+
     {
       key: 'canBeUsedAsIngredient',
       header: 'Status',
@@ -420,6 +514,20 @@ export default function RecipesPage() {
           onLimitChange={handleLimitChange}
           searchPlaceholder="Cari resep..."
           emptyState={emptyState}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          bulkActions={
+            <BulkActions
+              data={recipes}
+              selectedItems={selectedItems}
+              onSelectionChange={setSelectedItems}
+              onBulkDelete={handleBulkDelete}
+              onBulkExport={handleBulkExport}
+              onBulkCategoryChange={handleBulkCategoryChange}
+              categories={categories}
+              loading={loading}
+            />
+          }
           renderItemCard={(recipe) => (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -452,6 +560,11 @@ export default function RecipesPage() {
                     {recipe.description && (
                       <div className="text-sm text-gray-500 truncate">{recipe.description}</div>
                     )}
+                    {recipe.sku && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        SKU: <span className="font-mono">{recipe.sku}</span>
+                      </div>
+                    )}
                     {recipe.category && (
                       <span 
                         className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white mt-1"
@@ -462,24 +575,18 @@ export default function RecipesPage() {
                     )}
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-sm text-gray-500">COGS/Unit</div>
-                  <div className="font-medium text-blue-900">Rp {recipe.cogsPerServing.toLocaleString('id-ID')}</div>
-                </div>
+                                  <div className="text-right flex-shrink-0">
+                    <div className="text-sm text-gray-500">COGS/Unit</div>
+                    <div className="font-medium text-blue-900">
+                      {decimalSettings ? formatCurrency(recipe.cogsPerServing, decimalSettings) : `Rp ${recipe.cogsPerServing.toLocaleString('id-ID')}`}
+                    </div>
+                  </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="text-sm">
                 <div>
                   <div className="text-gray-500">Hasil</div>
                   <div className="font-medium text-gray-900">{recipe.yield} {recipe.yieldUnit?.symbol || 'porsi'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Harga Jual</div>
-                  {recipe.sellingPrice ? (
-                    <div className="font-medium text-green-900">Rp {recipe.sellingPrice.toLocaleString('id-ID')}</div>
-                  ) : (
-                    <div className="text-gray-500">-</div>
-                  )}
                 </div>
               </div>
 

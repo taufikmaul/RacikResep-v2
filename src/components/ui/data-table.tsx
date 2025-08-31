@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 export interface Column<T> {
@@ -39,6 +40,11 @@ interface DataTableProps<T> {
   emptyState?: React.ReactNode
   // Optional: render a mobile-friendly card for each item. If omitted, only the table view is shown.
   renderItemCard?: (item: T) => React.ReactNode
+  // Bulk actions support
+  bulkActions?: React.ReactNode
+  // Selection support
+  selectedItems?: string[]
+  onSelectionChange?: (selectedIds: string[]) => void
 }
 
 export function DataTable<T extends { id: string }>({
@@ -55,7 +61,10 @@ export function DataTable<T extends { id: string }>({
   onLimitChange,
   searchPlaceholder = "Cari...",
   emptyState,
-  renderItemCard
+  renderItemCard,
+  bulkActions,
+  selectedItems = [],
+  onSelectionChange
 }: DataTableProps<T>) {
   // Debounced search handling for better UX and to avoid excessive fetches
   const [internalSearch, setInternalSearch] = useState(searchTerm)
@@ -194,11 +203,30 @@ export function DataTable<T extends { id: string }>({
       {/* Table on sm and up */}
       <Card className={renderItemCard ? 'hidden sm:block' : ''}>
         <CardContent className="p-0">
+          {/* Bulk Actions */}
+          {bulkActions}
+          
           {data.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
+                    {onSelectionChange && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedItems.length === data.length && data.length > 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                onSelectionChange(data.map(item => item.id))
+                              } else {
+                                onSelectionChange([])
+                              }
+                            }}
+                          />
+                        </div>
+                      </th>
+                    )}
                     {columns.map((column) => (
                       <th
                         key={column.key}
@@ -218,6 +246,22 @@ export function DataTable<T extends { id: string }>({
                 <tbody className="bg-white divide-y divide-gray-200">
                   {data.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
+                      {onSelectionChange && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm w-12">
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={selectedItems.includes(item.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  onSelectionChange([...selectedItems, item.id])
+                                } else {
+                                  onSelectionChange(selectedItems.filter(id => id !== item.id))
+                                }
+                              }}
+                            />
+                          </div>
+                        </td>
+                      )}
                       {columns.map((column) => (
                         <td
                           key={column.key}

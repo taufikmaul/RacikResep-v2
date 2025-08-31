@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateSku } from '@/lib/sku'
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       whereClause.OR = [
         { name: { contains: search } },
+        { sku: { contains: search } },
         { description: { contains: search } },
         {
           category: {
@@ -61,6 +63,8 @@ export async function GET(request: NextRequest) {
       orderByClause.category = { name: sortOrder }
     } else if (sortBy === 'yieldUnit') {
       orderByClause.yieldUnit = { name: sortOrder }
+    } else if (sortBy === 'sku') {
+      orderByClause.sku = sortOrder
     } else {
       orderByClause[sortBy] = sortOrder
     }
@@ -120,8 +124,14 @@ export async function GET(request: NextRequest) {
       take: limit
     })
 
+    // Strip selling-related fields from API response
+    const sanitized = recipes.map((r: any) => {
+      const { sellingPrice, profitMargin, marginType, ...rest } = r
+      return rest
+    })
+
     return NextResponse.json({
-      data: recipes,
+      data: sanitized,
       pagination: {
         page,
         limit,
@@ -152,6 +162,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id
 
     const {
+      sku,
       name,
       description,
       instructions,
@@ -161,9 +172,6 @@ export async function POST(request: NextRequest) {
       laborCost,
       operationalCost,
       packagingCost,
-      profitMargin,
-      marginType,
-      sellingPrice,
       canBeUsedAsIngredient,
       categoryId,
       ingredients,
@@ -176,6 +184,19 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    // Generate SKU if not provided
+    let finalSku = sku
+    if (!sku || sku.trim() === '') {
+      try {
+        finalSku = await generateSku('recipe', businessId)
+        console.log('POST /api/recipes - Generated SKU:', finalSku)
+      } catch (skuError) {
+        console.error('POST /api/recipes - Error generating SKU:', skuError)
+        // Continue without SKU if generation fails
+        finalSku = null
+      }
     }
 
     // Calculate ingredient costs
@@ -224,7 +245,9 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const cost = subRecipe.costPerUnit * subRec.quantity
+        // Use cogsPerServing for sub-recipe costing to allow any recipe to be used as a sub-recipe
+        const unitCost = subRecipe.cogsPerServing || 0
+        const cost = unitCost * subRec.quantity
         subRecipesCost += cost
 
         recipeSubRecipes.push({
@@ -242,6 +265,7 @@ export async function POST(request: NextRequest) {
 
     const recipe = await prisma.recipe.create({
       data: {
+        sku: finalSku,
         name,
         description,
         instructions,
@@ -251,9 +275,6 @@ export async function POST(request: NextRequest) {
         laborCost,
         operationalCost,
         packagingCost,
-        profitMargin,
-        marginType,
-        sellingPrice,
         canBeUsedAsIngredient,
         costPerUnit,
         totalCOGS,

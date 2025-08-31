@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -52,6 +52,7 @@ interface RecipeIngredient {
 
 interface Recipe {
   id: string
+  sku?: string
   name: string
   description?: string
   instructions?: string
@@ -61,9 +62,6 @@ interface Recipe {
   laborCost: number
   operationalCost: number
   packagingCost: number
-  profitMargin: number
-  marginType: string
-  sellingPrice: number
   canBeUsedAsIngredient: boolean
   categoryId?: string
   ingredients: Array<{
@@ -85,7 +83,9 @@ interface RecipeDialogProps {
 }
 
 export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogProps) {
+  const formRef = useRef<HTMLFormElement>(null)
   const [formData, setFormData] = useState({
+    sku: '',
     name: '',
     description: '',
     instructions: '',
@@ -95,8 +95,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
     laborCost: '0',
     operationalCost: '0',
     packagingCost: '0',
-    profitMargin: '0',
-    marginType: 'percentage',
     canBeUsedAsIngredient: false,
     categoryId: ''
   })
@@ -124,6 +122,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
       
       if (recipe) {
         setFormData({
+          sku: recipe.sku || '',
           name: recipe.name,
           description: recipe.description || '',
           instructions: recipe.instructions || '',
@@ -133,8 +132,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
           laborCost: recipe.laborCost.toString(),
           operationalCost: recipe.operationalCost.toString(),
           packagingCost: recipe.packagingCost.toString(),
-          profitMargin: recipe.profitMargin.toString(),
-          marginType: recipe.marginType || 'percentage',
           canBeUsedAsIngredient: recipe.canBeUsedAsIngredient || false,
           categoryId: recipe.categoryId || ''
         })
@@ -146,6 +143,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
         setSubRecipes(recipe.subRecipes || [])
       } else {
         setFormData({
+          sku: '',
           name: '',
           description: '',
           instructions: '',
@@ -155,8 +153,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
           laborCost: '0',
           operationalCost: '0',
           packagingCost: '0',
-          profitMargin: '0',
-          marginType: 'percentage',
           canBeUsedAsIngredient: false,
           categoryId: ''
         })
@@ -169,10 +165,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
   useEffect(() => {
     calculateCOGS()
   }, [recipeIngredients, subRecipes, formData.laborCost, formData.operationalCost, formData.packagingCost, formData.yield, ingredients, availableRecipes])
-
-  useEffect(() => {
-    calculateSellingPrice()
-  }, [totalCOGS, formData.profitMargin, formData.marginType, formData.yield])
 
   const fetchCategories = async () => {
     try {
@@ -264,24 +256,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
     setCogsPerServing(perServing)
   }
 
-  const calculateSellingPrice = () => {
-    const margin = parseFloat(formData.profitMargin) || 0
-    const yieldAmount = parseFloat(formData.yield) || 1
-    const cogsPerUnit = totalCOGS / yieldAmount
-
-    let price = 0
-    if (formData.marginType === 'percentage') {
-      // Standard gross margin on price basis
-      const marginFraction = Math.min(Math.max(margin / 100, 0), 0.99)
-      price = cogsPerUnit / (1 - marginFraction)
-    } else {
-      // Amount (nominal) margin: simple additive
-      price = cogsPerUnit + margin
-    }
-
-    setSellingPrice(price)
-  }
-
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -311,10 +285,31 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
+    const { name, value } = e.target
+    
+    // Handle numeric fields with proper decimal validation
+    if (['yield', 'laborCost', 'operationalCost', 'packagingCost'].includes(name)) {
+      if (value === '' || value === '0') {
+        setFormData(prev => ({
+          ...prev,
+          [name]: name === 'yield' ? '1' : '0'
+        }))
+      } else {
+        const parsed = parseFloat(value)
+        if (!isNaN(parsed) && parsed >= 0) {
+          setFormData(prev => ({
+            ...prev,
+            [name]: value
+          }))
+        }
+      }
+    } else {
+      // Handle non-numeric fields normally
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
   const addIngredient = () => {
@@ -389,8 +384,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
       const parsedLabor = Number.isFinite(parseFloat(formData.laborCost)) ? parseFloat(formData.laborCost) : 0
       const parsedOperational = Number.isFinite(parseFloat(formData.operationalCost)) ? parseFloat(formData.operationalCost) : 0
       const parsedPackaging = Number.isFinite(parseFloat(formData.packagingCost)) ? parseFloat(formData.packagingCost) : 0
-      const parsedMargin = Number.isFinite(parseFloat(formData.profitMargin)) ? parseFloat(formData.profitMargin) : 0
-
+     
       // Client-side validations to prevent 4xx/5xx
       if (!formData.name.trim()) {
         throw new Error('Nama resep wajib diisi')
@@ -425,7 +419,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
         laborCost: parsedLabor,
         operationalCost: parsedOperational,
         packagingCost: parsedPackaging,
-        profitMargin: parsedMargin,
         sellingPrice: sellingPrice,
         ingredients: cleanedIngredients,
         subRecipes: cleanedSubRecipes
@@ -445,44 +438,95 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={recipe ? 'Edit Resep' : 'Tambah Resep'} size="2xl">
-      <div className="p-6" style={{ background: 'var(--color-panel-solid)' }}>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={recipe ? 'Edit Resep' : 'Tambah Resep'} 
+      size="2xl"
+      footer={
+        <>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose}
+            className="flex-1 h-10"
+          >
+            Batal
+          </Button>
+          <Button 
+            type="button" 
+            onClick={() => formRef.current?.requestSubmit()}
+            disabled={loading}
+            variant="accent"
+            className="flex-1 h-10"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Menyimpan...
+              </>
+            ) : (
+              recipe ? 'Perbarui' : 'Simpan'
+            )}
+          </Button>
+        </>
+      }
+    >
+      <div className="p-6 bg-gradient-to-br from-purple-50 via-white to-pink-50">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div 
-              className="px-4 py-3 rounded-md text-sm border"
-              style={{
-                background: 'var(--red-2)',
-                border: '1px solid var(--red-7)',
-                color: 'var(--red-11)'
-              }}
-            >
-              {error}
+            <div className="px-4 py-3 rounded-lg text-sm border-2 border-red-200 bg-red-50 text-red-700 font-medium">
+              ❌ {error}
             </div>
           )}
 
-            {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Nama Resep
-              </label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                placeholder="Contoh: Nasi Goreng Spesial"
-                className="h-10"
-                style={{ 
-                  background: 'var(--gray-1)', 
-                  border: '1px solid var(--gray-7)', 
-                  color: 'var(--gray-12)'
-                }}
-              />
+          {/* Basic Information Section */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-purple-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm font-bold">📝</span>
+              </div>
+              <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Informasi Dasar Resep
+              </h3>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Nama Resep
+                </label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Contoh: Nasi Goreng Spesial"
+                  className="h-11 border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 rounded-lg"
+                />
+              </div>
 
+              <div>
+                <label htmlFor="sku" className="block text-sm font-semibold mb-2 text-gray-700">
+                  SKU (opsional)
+                </label>
+                <Input
+                  id="sku"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleChange}
+                  placeholder="Contoh: RCP-001"
+                  className="h-11 border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 rounded-lg font-mono"
+                />
+                <p className="text-xs mt-2 text-gray-500 bg-purple-50 p-2 rounded-md border border-purple-200">
+                  💡 Kode unik untuk identifikasi resep. Kosongkan untuk generate otomatis.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="categoryId" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
                 Kategori
@@ -490,24 +534,17 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
               <Select
                 value={formData.categoryId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-                required
               >
                 <SelectTrigger 
                   className="h-10"
-                  style={{ 
-                    background: 'var(--gray-1)', 
-                    border: '1px solid var(--gray-7)', 
-                    color: 'var(--gray-12)'
-                  }}
                 >
                   <SelectValue placeholder="Pilih Kategori" />
                 </SelectTrigger>
-                <SelectContent style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-7)' }}>
+                <SelectContent>
                   {categories.map((category) => (
                     <SelectItem 
                       key={category.id} 
                       value={category.id}
-                      style={{ color: 'var(--gray-12)' }}
                       className="hover:bg-gray-3"
                     >
                       {category.name}
@@ -614,24 +651,17 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
               <Select
                 value={formData.yieldUnitId}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, yieldUnitId: value }))}
-                required
               >
                 <SelectTrigger 
                   className="h-10"
-                  style={{ 
-                    background: 'var(--gray-1)', 
-                    border: '1px solid var(--gray-7)', 
-                    color: 'var(--gray-12)'
-                  }}
                 >
                   <SelectValue placeholder="Pilih Satuan" />
                 </SelectTrigger>
-                <SelectContent style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-7)' }}>
+                <SelectContent>
                   {units.map((unit) => (
                     <SelectItem 
                       key={unit.id} 
                       value={unit.id}
-                      style={{ color: 'var(--gray-12)' }}
                       className="hover:bg-gray-3"
                     >
                       {unit.name} ({unit.symbol})
@@ -708,71 +738,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
             </div>
           </div>
 
-          {/* Pricing */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Jenis Margin
-              </label>
-              <Select
-                value={formData.marginType}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, marginType: value }))}
-              >
-                <SelectTrigger 
-                  className="h-10"
-                  style={{ 
-                    background: 'var(--gray-1)', 
-                    border: '1px solid var(--gray-7)', 
-                    color: 'var(--gray-12)'
-                  }}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-7)' }}>
-                  <SelectItem value="percentage" style={{ color: 'var(--gray-12)' }}>Persentase (%)</SelectItem>
-                  <SelectItem value="amount" style={{ color: 'var(--gray-12)' }}>Nominal (Rp)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label htmlFor="profitMargin" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Margin {formData.marginType === 'percentage' ? '(%)' : '(Rp)'}
-              </label>
-              <Input
-                id="profitMargin"
-                name="profitMargin"
-                type="number"
-                step="0.01"
-                value={formData.profitMargin}
-                onChange={handleChange}
-                placeholder="0"
-                className="h-10"
-                style={{ 
-                  background: 'var(--gray-1)', 
-                  border: '1px solid var(--gray-7)', 
-                  color: 'var(--gray-12)'
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Harga Jual per {units.find(u => u.id === formData.yieldUnitId)?.symbol || 'unit'}
-              </label>
-              <div 
-                className="h-10 px-3 py-2 rounded-md border flex items-center"
-                style={{ 
-                  background: 'var(--gray-2)', 
-                  border: '1px solid var(--gray-6)', 
-                  color: 'var(--gray-12)'
-                }}
-              >
-                Rp {sellingPrice.toLocaleString('id-ID')}
-              </div>
-            </div>
-          </div>
-
           {/* Recipe Usage Flag */}
           <div className="flex items-center gap-3">
             <input
@@ -781,7 +746,6 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
               checked={formData.canBeUsedAsIngredient}
               onChange={(e) => setFormData(prev => ({ ...prev, canBeUsedAsIngredient: e.target.checked }))}
               className="w-4 h-4 rounded"
-              style={{ accentColor: 'var(--accent-9)' }}
             />
             <label htmlFor="canBeUsedAsIngredient" className="text-sm font-medium" style={{ color: 'var(--gray-12)' }}>
               Resep ini dapat digunakan sebagai bahan dalam resep lain
@@ -791,16 +755,12 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
             {/* Ingredients */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium" style={{ color: 'var(--gray-12)' }}>Bahan-bahan</h3>
+              <h3 className="text-lg font-medium text-gray-900">Bahan-bahan</h3>
               <Button 
                 type="button" 
                 onClick={addIngredient} 
                 size="sm"
-                style={{
-                  background: 'var(--accent-9)',
-                  color: 'white',
-                  border: 'none'
-                }}
+                variant="accent"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Bahan
@@ -811,34 +771,24 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
               {recipeIngredients.map((recipeIng, index) => (
                 <div 
                   key={index} 
-                  className="flex items-center gap-3 p-3 rounded-lg border"
-                  style={{
-                    background: 'var(--gray-2)',
-                    border: '1px solid var(--gray-6)'
-                  }}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50"
                 >
                   <Select
                     value={recipeIng.ingredientId}
                     onValueChange={(value) => updateIngredient(index, 'ingredientId', value)}
                   >
                     <SelectTrigger 
-                      className="flex-1 h-10"
-                      style={{ 
-                        background: 'var(--gray-1)', 
-                        border: '1px solid var(--gray-7)', 
-                        color: 'var(--gray-12)'
-                      }}
+                      className="flex-1 h-10 bg-white border-gray-300 text-gray-900"
                     >
                       <SelectValue placeholder="Pilih Bahan" />
                     </SelectTrigger>
-                    <SelectContent style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-7)' }}>
-                      <div className="p-2 border-b" style={{ borderColor: 'var(--gray-6)' }}>
+                    <SelectContent className="bg-white border-gray-200">
+                      <div className="p-2 border-b border-gray-200">
                         <Input
                           value={ingredientSearch[index] || ''}
                           onChange={(e) => setIngredientSearch(prev => ({ ...prev, [index]: e.target.value }))}
                           placeholder="Cari bahan..."
-                          className="h-9"
-                          style={{ background: 'var(--gray-1)', border: '1px solid var(--gray-6)', color: 'var(--gray-12)' }}
+                          className="h-9 bg-gray-50 border-gray-300 text-gray-900"
                         />
                       </div>
                       {ingredientOptionsForIndex(index)
@@ -847,8 +797,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                           <SelectItem 
                             key={ingredient.id} 
                             value={ingredient.id}
-                            style={{ color: 'var(--gray-12)' }}
-                            className="hover:bg-gray-3"
+                            className="hover:bg-gray-100"
                           >
                             <div className="flex flex-col">
                               <span className="font-medium">{ingredient.name}</span>
@@ -862,24 +811,25 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                   <Input
                     type="number"
                     step="0.01"
-                    value={recipeIng.quantity}
-                    onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
-                    placeholder="Jumlah"
-                    className="w-24 h-10"
-                    style={{ 
-                      background: 'var(--gray-1)', 
-                      border: '1px solid var(--gray-7)', 
-                      color: 'var(--gray-12)'
+                    min="0.01"
+                    value={recipeIng.quantity.toString()}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value === '' || value === '0') {
+                        updateIngredient(index, 'quantity', 0)
+                      } else {
+                        const parsed = parseFloat(value)
+                        if (!isNaN(parsed) && parsed > 0) {
+                          updateIngredient(index, 'quantity', parsed)
+                        }
+                      }
                     }}
+                    placeholder="Jumlah"
+                    className="w-24 h-10 bg-white border-gray-300 text-gray-900"
                   />
 
                   <div 
-                    className="w-24 h-10 inline-flex items-center justify-center rounded-md border text-sm"
-                    style={{ 
-                      background: 'var(--gray-2)', 
-                      border: '1px solid var(--gray-6)', 
-                      color: 'var(--gray-11)'
-                    }}
+                    className="w-24 h-10 inline-flex items-center justify-center rounded-md border text-sm bg-gray-100 border-gray-300 text-gray-700"
                     title="Satuan mengikuti bahan yang dipilih"
                   >
                     {ingredients.find(ing => ing.id === recipeIng.ingredientId)?.usageUnit?.symbol || '—'}
@@ -887,15 +837,10 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
 
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
                     onClick={() => removeIngredient(index)}
                     className="h-10"
-                    style={{
-                      background: 'var(--red-2)',
-                      border: '1px solid var(--red-7)',
-                      color: 'var(--red-11)'
-                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -907,16 +852,12 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
             {availableRecipes.length > 0 && (
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-medium" style={{ color: 'var(--gray-12)' }}>Resep sebagai Bahan</h4>
+                  <h4 className="text-md font-medium text-gray-900">Resep sebagai Bahan</h4>
                   <Button 
                     type="button" 
                     onClick={addSubRecipe} 
                     size="sm"
-                    style={{
-                      background: 'var(--green-9)',
-                      color: 'white',
-                      border: 'none'
-                    }}
+                    variant="success"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Tambah Resep
@@ -927,34 +868,24 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                   {subRecipes.map((subRec, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center gap-3 p-3 rounded-lg border"
-                      style={{
-                        background: 'var(--green-2)',
-                        border: '1px solid var(--green-6)'
-                      }}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-green-200 bg-green-50"
                     >
                       <Select
                         value={subRec.subRecipeId}
                         onValueChange={(value) => updateSubRecipe(index, 'subRecipeId', value)}
                       >
                         <SelectTrigger 
-                          className="flex-1 h-10"
-                          style={{ 
-                            background: 'var(--gray-1)', 
-                            border: '1px solid var(--gray-7)', 
-                            color: 'var(--gray-12)'
-                          }}
+                          className="flex-1 h-10 bg-white border-gray-300 text-gray-900"
                         >
                           <SelectValue placeholder="Pilih Resep" />
                         </SelectTrigger>
-                        <SelectContent style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-7)' }}>
-                          <div className="p-2 border-b" style={{ borderColor: 'var(--gray-6)' }}>
+                        <SelectContent className="bg-white border-gray-200">
+                          <div className="p-2 border-b border-gray-200">
                             <Input
                               value={subRecipeSearch[index] || ''}
                               onChange={(e) => setSubRecipeSearch(prev => ({ ...prev, [index]: e.target.value }))}
                               placeholder="Cari resep..."
-                              className="h-9"
-                              style={{ background: 'var(--gray-1)', border: '1px solid var(--gray-6)', color: 'var(--gray-12)' }}
+                              className="h-9 bg-gray-50 border-gray-300 text-gray-900"
                             />
                           </div>
                           {subRecipeOptionsForIndex(index)
@@ -963,8 +894,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                               <SelectItem 
                                 key={recipe.id} 
                                 value={recipe.id}
-                                style={{ color: 'var(--gray-12)' }}
-                                className="hover:bg-gray-3"
+                                className="text-gray-900 hover:bg-gray-100"
                               >
                                 <div className="flex flex-col">
                                   <span className="font-medium">{recipe.name}</span>
@@ -978,32 +908,33 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                       <Input
                         type="number"
                         step="0.01"
+                        min="0.01"
                         value={subRec.quantity}
-                        onChange={(e) => updateSubRecipe(index, 'quantity', parseFloat(e.target.value) || 0)}
-                        placeholder="Jumlah"
-                        className="w-24 h-10"
-                        style={{ 
-                          background: 'var(--gray-1)', 
-                          border: '1px solid var(--gray-7)', 
-                          color: 'var(--gray-12)'
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (value === '' || value === '0') {
+                            updateSubRecipe(index, 'quantity', 0)
+                          } else {
+                            const parsed = parseFloat(value)
+                            if (!isNaN(parsed) && parsed > 0) {
+                              updateSubRecipe(index, 'quantity', parsed)
+                            }
+                          }
                         }}
+                        placeholder="Jumlah"
+                        className="w-24 h-10 bg-white border-gray-300 text-gray-900"
                       />
 
-                      <div className="w-16 text-xs" style={{ color: 'var(--gray-11)' }}>
+                      <div className="w-16 text-xs text-gray-600">
                         {availableRecipes.find(r => r.id === subRec.subRecipeId)?.yieldUnit?.symbol || ''}
                       </div>
 
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
                         onClick={() => removeSubRecipe(index)}
                         className="h-10"
-                        style={{
-                          background: 'var(--red-2)',
-                          border: '1px solid var(--red-7)',
-                          color: 'var(--red-11)'
-                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1016,72 +947,29 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
 
             {/* COGS Summary */}
           <div 
-            className="rounded-lg p-4 border"
-            style={{
-              background: 'var(--blue-2)',
-              border: '1px solid var(--blue-6)'
-            }}
+            className="rounded-lg p-4 border border-blue-200 bg-blue-50"
           >
             <div className="flex items-center gap-2 mb-3">
-              <Calculator className="h-5 w-5" style={{ color: 'var(--blue-11)' }} />
-              <h3 className="text-lg font-medium" style={{ color: 'var(--blue-12)' }}>Ringkasan COGS</h3>
+              <Calculator className="h-5 w-5 text-blue-700" />
+              <h3 className="text-lg font-medium text-blue-900">Ringkasan COGS</h3>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-sm" style={{ color: 'var(--blue-11)' }}>Total COGS</p>
-                <p className="text-xl font-semibold" style={{ color: 'var(--blue-12)' }}>
+                <p className="text-sm text-blue-700">Total COGS</p>
+                <p className="text-xl font-semibold text-blue-900">
                   Rp {totalCOGS.toLocaleString('id-ID')}
                 </p>
               </div>
               <div>
-                <p className="text-sm" style={{ color: 'var(--blue-11)' }}>COGS per {units.find(u => u.id === formData.yieldUnitId)?.symbol || 'unit'}</p>
-                <p className="text-xl font-semibold" style={{ color: 'var(--blue-12)' }}>
+                <p className="text-sm text-blue-700">COGS per {units.find(u => u.id === formData.yieldUnitId)?.symbol || 'unit'}</p>
+                <p className="text-xl font-semibold text-blue-900">
                   Rp {cogsPerServing.toLocaleString('id-ID')}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm" style={{ color: 'var(--blue-11)' }}>Harga Jual per {units.find(u => u.id === formData.yieldUnitId)?.symbol || 'unit'}</p>
-                <p className="text-xl font-semibold" style={{ color: 'var(--blue-12)' }}>
-                  Rp {sellingPrice.toLocaleString('id-ID')}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              className="h-10"
-              style={{
-                background: 'var(--gray-2)',
-                border: '1px solid var(--gray-7)',
-                color: 'var(--gray-11)'
-              }}
-            >
-              Batal
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="h-10"
-              style={{
-                background: 'var(--accent-9)',
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                recipe ? 'Perbarui' : 'Simpan'
-              )}
-            </Button>
-          </div>
+
           </form>
         </div>
       </Modal>

@@ -5,12 +5,18 @@ import { useSession } from 'next-auth/react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column, PaginationInfo } from '@/components/ui/data-table'
+import { BulkActions } from '@/components/ui/bulk-actions'
 import { Plus, Edit, Trash2, Package, Upload, Download, FileText } from 'lucide-react'
 import { IngredientDialog } from '@/components/ingredients/ingredient-dialog'
 import { IngredientImportDialog } from '@/components/ingredients/ingredient-import-dialog'
+import { PriceUpdateDialog } from '@/components/ingredients/price-update-dialog'
+import { useDecimalSettings } from '@/hooks/useDecimalSettings'
+import { formatCurrency } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface Ingredient {
   id: string
+  sku?: string
   name: string
   description?: string
   purchasePrice: number
@@ -19,6 +25,7 @@ interface Ingredient {
   categoryId?: string
   purchaseUnitId: string
   usageUnitId: string
+  conversionFactor: number
   usageCount?: number
   category?: {
     id: string
@@ -41,6 +48,7 @@ interface Ingredient {
 
 export default function IngredientsPage() {
   const { data: session } = useSession()
+  const { settings: decimalSettings } = useDecimalSettings()
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -57,6 +65,10 @@ export default function IngredientsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isPriceUpdateOpen, setIsPriceUpdateOpen] = useState(false)
+  const [updatingIngredient, setUpdatingIngredient] = useState<Ingredient | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string }>>([])
 
   const fetchIngredients = async () => {
     try {
@@ -81,9 +93,22 @@ export default function IngredientsPage() {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      if (response.ok) {
+        const result = await response.json()
+        setCategories(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
   useEffect(() => {
     if (session) {
       fetchIngredients()
+      fetchCategories()
     }
   }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm])
 
@@ -108,11 +133,17 @@ export default function IngredientsPage() {
     setIsDialogOpen(true)
   }
 
+  const handlePriceUpdate = (ingredient: Ingredient) => {
+    setUpdatingIngredient(ingredient)
+    setIsPriceUpdateOpen(true)
+  }
+
   // Convert page ingredient format to dialog format
   const convertToDialogFormat = (ingredient: Ingredient | null) => {
     if (!ingredient) return undefined
     return {
       id: ingredient.id,
+      sku: ingredient.sku || '',
       name: ingredient.name,
       description: ingredient.description || '',
       categoryId: ingredient.categoryId || '',
@@ -120,7 +151,7 @@ export default function IngredientsPage() {
       purchaseQuantity: ingredient.packageSize,
       purchaseUnitId: ingredient.purchaseUnitId,
       usageUnitId: ingredient.usageUnitId,
-      conversionFactor: 1
+      conversionFactor: ingredient.conversionFactor
     }
   }
 
@@ -149,10 +180,78 @@ export default function IngredientsPage() {
     setPagination(prev => ({ ...prev, limit, page: 1 }))
   }
 
+  const handleBulkDelete = async (ids: string[]) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${ids.length} bahan yang dipilih?`)) return
+
+    try {
+      const response = await fetch('/api/ingredients/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setIngredients(ingredients.filter(ingredient => !ids.includes(ingredient.id)))
+        setSelectedItems([])
+        // Refresh data if current page becomes empty
+        if (ingredients.length <= ids.length && pagination.page > 1) {
+          setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+        }
+        toast.success(result.message)
+      } else {
+        const error = await response.json()
+        toast.error(`Gagal menghapus bahan: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk deleting ingredients:', error)
+      toast.error('Gagal menghapus bahan yang dipilih')
+    }
+  }
+
+  const handleBulkExport = async (ids: string[]) => {
+    try {
+      const params = new URLSearchParams({ ids: ids.join(',') })
+      window.open(`/api/ingredients/export?${params}`, '_blank')
+    } catch (error) {
+      console.error('Error bulk exporting ingredients:', error)
+      alert('Gagal export bahan yang dipilih')
+    }
+  }
+
+  const handleBulkCategoryChange = async (ids: string[], categoryId: string) => {
+    try {
+      const response = await fetch('/api/ingredients/bulk-category', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, categoryId })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        // Update local state
+        setIngredients(ingredients.map(ingredient => 
+          ids.includes(ingredient.id) 
+            ? { ...ingredient, categoryId, category: categories.find(c => c.id === categoryId) }
+            : ingredient
+        ))
+        setSelectedItems([])
+        toast.success(result.message)
+      } else {
+        const error = await response.json()
+        toast.error(`Gagal mengubah kategori: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk changing categories:', error)
+      toast.error('Gagal mengubah kategori bahan yang dipilih')
+    }
+  }
+
   const handleSave = async (ingredientData: any) => {
     try {
       // Convert dialog format to API format
       const apiData = {
+        sku: ingredientData.sku || undefined,
         name: ingredientData.name,
         description: ingredientData.description,
         categoryId: ingredientData.categoryId,
@@ -211,6 +310,22 @@ export default function IngredientsPage() {
       )
     },
     {
+      key: 'sku',
+      header: 'SKU',
+      sortable: true,
+      render: (ingredient) => (
+        <div className="text-sm">
+          {ingredient.sku ? (
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-mono bg-gray-100 text-gray-700">
+              {ingredient.sku}
+            </span>
+          ) : (
+            <span className="text-sm text-gray-500">-</span>
+          )}
+        </div>
+      )
+    },
+    {
       key: 'category',
       header: 'Kategori',
       sortable: true,
@@ -233,7 +348,7 @@ export default function IngredientsPage() {
       render: (ingredient) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
-            Rp {ingredient.purchasePrice.toLocaleString('id-ID')}
+            {decimalSettings ? formatCurrency(ingredient.purchasePrice, decimalSettings) : `Rp ${ingredient.purchasePrice.toLocaleString('id-ID')}`}
           </div>
           <div className="text-gray-500">
             per {ingredient.packageSize} {ingredient.purchaseUnit.symbol}
@@ -248,10 +363,25 @@ export default function IngredientsPage() {
       render: (ingredient) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
-            Rp {ingredient.costPerUnit.toLocaleString('id-ID')}
+            {decimalSettings ? formatCurrency(ingredient.costPerUnit, decimalSettings) : `Rp ${ingredient.costPerUnit.toLocaleString('id-ID')}`}
           </div>
           <div className="text-gray-500">
             per {ingredient.usageUnit.symbol}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'conversionFactor',
+      header: 'Faktor Konversi',
+      sortable: true,
+      render: (ingredient) => (
+        <div className="text-sm">
+          <div className="font-medium text-gray-900">
+            {ingredient.conversionFactor}
+          </div>
+          <div className="text-gray-500">
+            {ingredient.usageUnit.symbol} per {ingredient.purchaseUnit.symbol}
           </div>
         </div>
       )
@@ -274,14 +404,25 @@ export default function IngredientsPage() {
             size="sm"
             onClick={() => handleEdit(ingredient)}
             className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+            title="Edit Bahan"
           >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
+            onClick={() => handlePriceUpdate(ingredient)}
+            className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-green-600 hover:text-green-700"
+            title="Update Harga"
+          >
+            💰
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => handleDelete(ingredient.id)}
             className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700"
+            title="Hapus Bahan"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -364,6 +505,20 @@ export default function IngredientsPage() {
           onLimitChange={handleLimitChange}
           searchPlaceholder="Cari bahan baku..."
           emptyState={emptyState}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          bulkActions={
+            <BulkActions
+              data={ingredients}
+              selectedItems={selectedItems}
+              onSelectionChange={setSelectedItems}
+              onBulkDelete={handleBulkDelete}
+              onBulkExport={handleBulkExport}
+              onBulkCategoryChange={handleBulkCategoryChange}
+              categories={categories}
+              loading={loading}
+            />
+          }
           renderItemCard={(ingredient) => (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -378,6 +533,11 @@ export default function IngredientsPage() {
                     <div className="font-medium text-gray-900 truncate">{ingredient.name}</div>
                     {ingredient.description && (
                       <div className="text-sm text-gray-500 truncate">{ingredient.description}</div>
+                    )}
+                    {ingredient.sku && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        SKU: <span className="font-mono">{ingredient.sku}</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -401,13 +561,30 @@ export default function IngredientsPage() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <div className="text-gray-500">Harga Beli</div>
-                  <div className="font-medium text-gray-900">Rp {ingredient.purchasePrice.toLocaleString('id-ID')}</div>
+                  <div className="font-medium text-gray-900">
+                    {decimalSettings ? formatCurrency(ingredient.purchasePrice, decimalSettings) : `Rp ${ingredient.purchasePrice.toLocaleString('id-ID')}`}
+                  </div>
                   <div className="text-gray-500 text-xs">per {ingredient.packageSize} {ingredient.purchaseUnit.symbol}</div>
                 </div>
                 <div>
                   <div className="text-gray-500">Biaya per Unit</div>
-                  <div className="font-medium text-gray-900">Rp {ingredient.costPerUnit.toLocaleString('id-ID')}</div>
+                  <div className="font-medium text-gray-900">
+                    {decimalSettings ? formatCurrency(ingredient.costPerUnit, decimalSettings) : `Rp ${ingredient.costPerUnit.toLocaleString('id-ID')}`}
+                  </div>
                   <div className="text-gray-500 text-xs">per {ingredient.usageUnit.symbol}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-gray-500">Faktor Konversi</div>
+                  <div className="font-medium text-gray-900">{ingredient.conversionFactor}</div>
+                  <div className="text-gray-500 text-xs">{ingredient.usageUnit.symbol} per {ingredient.purchaseUnit.symbol}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Dipakai di Resep</div>
+                  <div className="font-medium text-gray-900">{ingredient.usageCount ?? 0}</div>
+                  <div className="text-gray-500 text-xs">resep</div>
                 </div>
               </div>
 
@@ -419,6 +596,14 @@ export default function IngredientsPage() {
                   className="flex-1"
                 >
                   <Edit className="h-4 w-4 mr-2" /> Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePriceUpdate(ingredient)}
+                  className="flex-1 text-green-600 hover:text-green-700"
+                >
+                  💰 Update Harga
                 </Button>
                 <Button
                   variant="outline"
@@ -444,6 +629,22 @@ export default function IngredientsPage() {
           onClose={() => setIsImportOpen(false)}
           onImported={() => fetchIngredients()}
         />
+        
+        {updatingIngredient && (
+          <PriceUpdateDialog
+            ingredient={updatingIngredient}
+            isOpen={isPriceUpdateOpen}
+            onClose={() => {
+              setIsPriceUpdateOpen(false)
+              setUpdatingIngredient(null)
+            }}
+            onUpdate={() => {
+              fetchIngredients()
+              setIsPriceUpdateOpen(false)
+              setUpdatingIngredient(null)
+            }}
+          />
+        )}
       </div>
     </DashboardLayout>
   )

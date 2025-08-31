@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateSku } from '@/lib/sku'
 
 export async function GET(
   request: NextRequest,
@@ -84,6 +85,7 @@ export async function PUT(
     }
 
     const {
+      sku,
       name,
       description,
       purchasePrice,
@@ -95,7 +97,7 @@ export async function PUT(
     } = await request.json()
 
     console.log('PUT /api/ingredients/[id] - Request data:', {
-      name, purchasePrice, packageSize, purchaseUnitId, usageUnitId, conversionFactor
+      sku, name, purchasePrice, packageSize, purchaseUnitId, usageUnitId, conversionFactor
     })
 
     // Validate required fields
@@ -107,13 +109,55 @@ export async function PUT(
       )
     }
 
-    // Calculate cost per unit - purchasePrice divided by conversionFactor
-    const costPerUnit = purchasePrice / conversionFactor
+    // Validate numeric fields
+    if (typeof purchasePrice !== 'number' || isNaN(purchasePrice) || purchasePrice <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid purchase price' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof packageSize !== 'number' || isNaN(packageSize) || packageSize <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid package size' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof conversionFactor !== 'number' || isNaN(conversionFactor) || conversionFactor <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid conversion factor' },
+        { status: 400 }
+      )
+    }
+
+    // Handle SKU - if empty and ingredient doesn't have one, generate it
+    let finalSku = sku
+    if ((!sku || sku.trim() === '') && !existingIngredient.sku) {
+      try {
+        finalSku = await generateSku('ingredient', businessId)
+        console.log('PUT /api/ingredients/[id] - Generated SKU:', finalSku)
+      } catch (skuError) {
+        console.error('PUT /api/ingredients/[id] - Error generating SKU:', skuError)
+        // Continue without SKU if generation fails
+        finalSku = null
+      }
+    } else if (sku && sku.trim() !== '') {
+      // Use provided SKU
+      finalSku = sku
+    } else {
+      // Keep existing SKU
+      finalSku = existingIngredient.sku
+    }
+
+    // Calculate cost per unit = purchasePrice / (packageSize * conversionFactor)
+    const costPerUnit = purchasePrice / (packageSize * conversionFactor)
     console.log('PUT /api/ingredients/[id] - Calculated costPerUnit:', costPerUnit)
 
     const ingredient = await prisma.ingredient.update({
       where: { id: ingredientId },
       data: {
+        sku: finalSku,
         name,
         description,
         purchasePrice,

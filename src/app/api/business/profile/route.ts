@@ -80,7 +80,8 @@ export async function PUT(request: NextRequest) {
       email,
       currency,
       language,
-      theme
+      theme,
+      logo
     } = await request.json()
 
     if (!name) {
@@ -99,7 +100,8 @@ export async function PUT(request: NextRequest) {
         email: email || null,
         currency: currency || 'IDR',
         language: language || 'id',
-        theme: theme || 'light'
+        theme: theme || 'light',
+        logo: logo || null
       },
       select: {
         id: true,

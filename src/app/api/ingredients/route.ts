@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateSku } from '@/lib/sku'
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       whereClause.OR = [
         { name: { contains: search } },
+        { sku: { contains: search } },
         { description: { contains: search } },
         {
           category: {
@@ -64,6 +66,8 @@ export async function GET(request: NextRequest) {
       orderByClause.purchaseUnit = { name: sortOrder }
     } else if (sortBy === 'usageUnit') {
       orderByClause.usageUnit = { name: sortOrder }
+    } else if (sortBy === 'sku') {
+      orderByClause.sku = sortOrder
     } else {
       orderByClause[sortBy] = sortOrder
     }
@@ -143,7 +147,11 @@ export async function POST(request: NextRequest) {
     const businessId = session.user.business.id
     const userId = session.user.id
 
+    const body = await request.json()
+    console.log('POST /api/ingredients - Received data:', body)
+
     const {
+      sku,
       name,
       description,
       purchasePrice,
@@ -152,21 +160,60 @@ export async function POST(request: NextRequest) {
       purchaseUnitId,
       usageUnitId,
       conversionFactor
-    } = await request.json()
+    } = body
 
     // Validate required fields
     if (!name || !purchasePrice || !packageSize || !purchaseUnitId || !usageUnitId || !conversionFactor) {
+      console.log('POST /api/ingredients - Missing required fields:', { name, purchasePrice, packageSize, purchaseUnitId, usageUnitId, conversionFactor })
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Calculate cost per unit - purchasePrice divided by conversionFactor
-    const costPerUnit = purchasePrice / conversionFactor
+    // Validate numeric fields
+    if (typeof purchasePrice !== 'number' || isNaN(purchasePrice) || purchasePrice <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid purchase price' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof packageSize !== 'number' || isNaN(packageSize) || packageSize <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid package size' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof conversionFactor !== 'number' || isNaN(conversionFactor) || conversionFactor <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid conversion factor' },
+        { status: 400 }
+      )
+    }
+
+    // Generate SKU if not provided
+    let finalSku = sku
+    if (!sku || sku.trim() === '') {
+      try {
+        finalSku = await generateSku('ingredient', businessId)
+        console.log('POST /api/ingredients - Generated SKU:', finalSku)
+      } catch (skuError) {
+        console.error('POST /api/ingredients - Error generating SKU:', skuError)
+        // Continue without SKU if generation fails
+        finalSku = null
+      }
+    }
+
+    // Calculate cost per unit = purchasePrice / (packageSize * conversionFactor)
+    const costPerUnit = purchasePrice / (packageSize * conversionFactor)
+    
+    console.log('POST /api/ingredients - Calculated costPerUnit:', costPerUnit)
 
     const ingredient = await prisma.ingredient.create({
       data: {
+        sku: finalSku,
         name,
         description,
         purchasePrice,
@@ -202,6 +249,8 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    console.log('POST /api/ingredients - Successfully created ingredient:', ingredient.id)
 
     // Log activity
     await prisma.activityLog.create({
