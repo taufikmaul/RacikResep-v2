@@ -35,7 +35,7 @@ export function BottomNav() {
           className="w-full rounded-2xl shadow-lg backdrop-blur supports-[backdrop-filter]:bg-opacity-80"
           style={{ background: "var(--color-panel-translucent)", border: "1px solid var(--gray-6)" }}
         >
-          <div className="relative grid grid-cols-6 gap-1 py-2">
+          <div className="relative grid grid-cols-5 gap-1 py-2">
             {items.map(({ href, label, Icon }) => {
               const active = pathname === href || pathname.startsWith(href + "/")
               return (
@@ -50,11 +50,6 @@ export function BottomNav() {
                 </Link>
               )
             })}
-            
-            {/* Theme Toggle */}
-            <div className="flex flex-col items-center justify-center gap-1 py-2">
-              <ThemeToggle />
-            </div>
           </div>
           {/* subtle bottom bar to mimic screenshot */}
           <div className="px-8 pb-2">

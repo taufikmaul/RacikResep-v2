@@ -60,6 +60,7 @@ export function AppSidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/ingredients', label: 'Bahan Baku', icon: '🥬' },
     { href: '/recipes', label: 'Resep', icon: '📝' },
+    { href: '/recipes/price-manager', label: 'Price Manager', icon: '💰' },
     {
       key: 'simulation',
       label: 'Simulasi',

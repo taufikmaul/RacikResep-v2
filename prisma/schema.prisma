@@ -43,6 +43,7 @@ model Business {
   skuSettings     SkuSettings?     @relation("BusinessSkuSettings")
   units           Unit[]
   priceHistory    IngredientPriceHistory[]
+  recipePriceHistory RecipePriceHistory[]
 
   @@map("businesses")
 }
@@ -152,11 +153,32 @@ model Recipe {
   ingredients           RecipeIngredient[]
   parentRecipes         RecipeSubRecipe[]  @relation("SubRecipe")
   subRecipes            RecipeSubRecipe[]  @relation("ParentRecipe")
+  priceHistory          RecipePriceHistory[]
   business              Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   category              Category?          @relation(fields: [categoryId], references: [id])
   yieldUnit             Unit?              @relation(fields: [yieldUnitId], references: [id])
 
   @@map("recipes")
+}
+
+model RecipePriceHistory {
+  id            String     @id @default(cuid())
+  recipeId      String
+  oldPrice      Float
+  newPrice      Float
+  priceChange   Float      // Difference between new and old price
+  percentageChange Float   // Percentage change
+  changeType    String     // "increase", "decrease", or "no_change"
+  changeDate    DateTime   @default(now())
+  reason        String?    // Reason for price change
+  businessId    String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  recipe        Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  business      Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_price_history")
 }
 
 model RecipeIngredient {

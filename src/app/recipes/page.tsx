@@ -494,10 +494,16 @@ export default function RecipesPage() {
             <h1 className="text-2xl font-bold text-gray-900">Resep</h1>
             <p className="text-gray-600">Kelola resep dan hitung COGS secara otomatis</p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2 w-full sm:w-auto">
-            <Plus className="h-4 w-4" />
-            Tambah Resep
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Tambah Resep
+            </Button>
+            <Button variant="outline" onClick={() => window.location.href = '/recipes/price-manager'} className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Price Manager
+            </Button>
+          </div>
         </div>
 
         <DataTable

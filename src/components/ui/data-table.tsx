@@ -67,7 +67,7 @@ export function DataTable<T extends { id: string }>({
   onSelectionChange
 }: DataTableProps<T>) {
   // Debounced search handling for better UX and to avoid excessive fetches
-  const [internalSearch, setInternalSearch] = useState(searchTerm)
+  const [internalSearch, setInternalSearch] = useState(searchTerm || '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Keep internal state in sync when parent searchTerm changes externally
@@ -143,17 +143,17 @@ export function DataTable<T extends { id: string }>({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder={searchPlaceholder}
-                value={internalSearch}
+                value={internalSearch || ''}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     if (debounceRef.current) clearTimeout(debounceRef.current)
-                    onSearchChange(internalSearch.trim())
+                    onSearchChange((internalSearch || '').trim())
                   }
                 }}
                 onBlur={() => {
                   if (debounceRef.current) clearTimeout(debounceRef.current)
-                  onSearchChange(internalSearch.trim())
+                  onSearchChange((internalSearch || '').trim())
                 }}
                 className="pl-10"
               />
