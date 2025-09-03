@@ -49,10 +49,10 @@ export function AppSidebar() {
     loadBiz()
   }, [])
 
-  // Auto-expand simulation menu if user is on a simulation page
+  // Auto-expand price manager menu if user is on a price manager page
   useEffect(() => {
-    if (pathname.startsWith('/simulation')) {
-      setExpandedMenus(prev => prev.includes('simulation') ? prev : [...prev, 'simulation'])
+    if (pathname.startsWith('/recipes/price-manager') || pathname.startsWith('/recipes/channel-price-manager')) {
+      setExpandedMenus(prev => prev.includes('price-manager') ? prev : [...prev, 'price-manager'])
     }
   }, [pathname])
 
@@ -60,14 +60,13 @@ export function AppSidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/ingredients', label: 'Bahan Baku', icon: '🥬' },
     { href: '/recipes', label: 'Resep', icon: '📝' },
-    { href: '/recipes/price-manager', label: 'Price Manager', icon: '💰' },
     {
-      key: 'simulation',
-      label: 'Simulasi',
-      icon: '🧮',
+      key: 'price-manager',
+      label: 'Price Manager',
+      icon: '💰',
       submenu: [
-        { href: '/simulation/harga-jual', label: 'Simulasi Harga Jual' },
-        { href: '/simulation/kalkulator-belanja', label: 'Kalkulator Belanja' }
+        { href: '/recipes/price-manager', label: 'Base Price Manager' },
+        { href: '/recipes/channel-price-manager', label: 'Channel Price Manager' }
       ]
     },
     { href: '/subscription', label: 'Subscription', icon: '👑' },

@@ -6,11 +6,14 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column, PaginationInfo } from '@/components/ui/data-table'
 import { BulkActions } from '@/components/ui/bulk-actions'
-import { Plus, Edit, Trash2, ChefHat, Calculator } from 'lucide-react'
+import { Plus, Edit, Trash2, ChefHat, Calculator, Heart, Filter } from 'lucide-react'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { Info } from 'lucide-react'
 import { ImagePreview } from '@/components/ui/image-preview'
 import { RecipeDialog } from '@/components/recipes/recipe-dialog'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
+import { ConfirmationDialog } from '@/components/ui/alert-dialog'
 import toast from 'react-hot-toast'
 
 interface Recipe {
@@ -31,6 +34,7 @@ interface Recipe {
   marginType: string
   sellingPrice: number
   canBeUsedAsIngredient: boolean
+  isFavorite?: boolean
   categoryId?: string
   category?: {
     id: string
@@ -77,6 +81,8 @@ export default function RecipesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 10,
@@ -91,6 +97,19 @@ export default function RecipesPage() {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string }>>([])
 
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  })
+
   const fetchRecipes = async () => {
     try {
       const params = new URLSearchParams({
@@ -98,7 +117,9 @@ export default function RecipesPage() {
         limit: pagination.limit.toString(),
         sortBy,
         sortOrder,
-        ...(searchTerm && { search: searchTerm })
+        ...(searchTerm && { search: searchTerm }),
+        ...(showFavoritesOnly && { favorites: 'true' }),
+        ...(selectedCategory && { category: selectedCategory })
       })
       
       const response = await fetch(`/api/recipes?${params}`)
@@ -116,13 +137,14 @@ export default function RecipesPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories')
+      const response = await fetch('/api/categories?type=recipe')
       if (response.ok) {
         const result = await response.json()
-        setCategories(result.data)
+        setCategories(result || [])
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
+      setCategories([]) // Ensure categories is always an array
     }
   }
 
@@ -131,7 +153,7 @@ export default function RecipesPage() {
       fetchRecipes()
       fetchCategories()
     }
-  }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm])
+  }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm, showFavoritesOnly, selectedCategory])
 
   // Close image preview on Escape key
   useEffect(() => {
@@ -142,20 +164,29 @@ export default function RecipesPage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus resep ini?')) return
+  const handleDelete = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Resep',
+      description: 'Apakah Anda yakin ingin menghapus resep ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/recipes/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/recipes/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        fetchRecipes()
+          if (response.ok) {
+            fetchRecipes()
+            toast.success('Resep berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus resep')
+          }
+        } catch (error) {
+          console.error('Error deleting recipe:', error)
+          toast.error('Gagal menghapus resep')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting recipe:', error)
-    }
+    })
   }
 
   const handleEdit = (recipe: Recipe) => {
@@ -216,33 +247,38 @@ export default function RecipesPage() {
     setPagination(prev => ({ ...prev, page }))
   }
 
-  const handleBulkDelete = async (ids: string[]) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${ids.length} resep yang dipilih?`)) return
-
-    try {
-      const response = await fetch('/api/recipes/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids })
-      })
-      
-      if (response.ok) {
-        const result = await response.json()
-        setRecipes(recipes.filter(recipe => !ids.includes(recipe.id)))
-        setSelectedItems([])
-        // Refresh data if current page becomes empty
-        if (recipes.length <= ids.length && pagination.page > 1) {
-          setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+  const handleBulkDelete = (ids: string[]) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Resep Terpilih',
+      description: `Apakah Anda yakin ingin menghapus ${ids.length} resep yang dipilih? Tindakan ini tidak dapat dibatalkan.`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch('/api/recipes/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            setRecipes(recipes.filter(recipe => !ids.includes(recipe.id)))
+            setSelectedItems([])
+            // Refresh data if current page becomes empty
+            if (recipes.length <= ids.length && pagination.page > 1) {
+              setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+            }
+            toast.success(result.message)
+          } else {
+            const error = await response.json()
+            toast.error(`Gagal menghapus resep: ${error.error}`)
+          }
+        } catch (error) {
+          console.error('Error bulk deleting recipes:', error)
+          toast.error('Gagal menghapus resep yang dipilih')
         }
-        toast.success(result.message)
-      } else {
-        const error = await response.json()
-        toast.error(`Gagal menghapus resep: ${error.error}`)
       }
-    } catch (error) {
-      console.error('Error bulk deleting recipes:', error)
-      toast.error('Gagal menghapus resep yang dipilih')
-    }
+    })
   }
 
   const handleBulkExport = async (ids: string[]) => {
@@ -268,7 +304,7 @@ export default function RecipesPage() {
         // Update local state
         setRecipes(recipes.map(recipe => 
           ids.includes(recipe.id) 
-            ? { ...recipe, categoryId, category: categories.find(c => c.id === categoryId) }
+            ? { ...recipe, categoryId, category: categories?.find(c => c.id === categoryId) }
             : recipe
         ))
         setSelectedItems([])
@@ -325,6 +361,33 @@ export default function RecipesPage() {
     }
   }
 
+  const handleToggleFavorite = async (recipeId: string) => {
+    try {
+      const recipe = recipes.find(r => r.id === recipeId)
+      if (!recipe) return
+
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isFavorite: !recipe.isFavorite }),
+      })
+
+      if (response.ok) {
+        setRecipes(prev => prev.map(r => 
+          r.id === recipeId ? { ...r, isFavorite: !r.isFavorite } : r
+        ))
+        toast.success(recipe.isFavorite ? 'Resep dihapus dari favorit' : 'Resep ditambahkan ke favorit')
+      } else {
+        toast.error('Gagal mengubah status favorit')
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+      toast.error('Gagal mengubah status favorit')
+    }
+  }
+
   const columns: Column<Recipe>[] = [
     {
       key: 'name',
@@ -378,22 +441,6 @@ export default function RecipesPage() {
       )
     },
     {
-      key: 'sku',
-      header: 'SKU',
-      sortable: true,
-      render: (recipe) => (
-        <div className="text-sm">
-          {recipe.sku ? (
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-mono bg-gray-100 text-gray-700">
-              {recipe.sku}
-            </span>
-          ) : (
-            <span className="text-sm text-gray-500">-</span>
-          )}
-        </div>
-      )
-    },
-    {
       key: 'yield',
       header: 'Hasil',
       sortable: true,
@@ -426,14 +473,62 @@ export default function RecipesPage() {
 
     {
       key: 'canBeUsedAsIngredient',
-      header: 'Status',
+      header: 'Basic Recipe',
       render: (recipe) => (
-        <div className="flex flex-col gap-1">
-          {recipe.canBeUsedAsIngredient && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-              Dapat digunakan sebagai bahan
-            </span>
-          )}
+        <div className="flex items-center justify-center">
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <button 
+                type="button"
+                className="p-2 rounded-full transition-colors duration-200 hover:bg-gray-100"
+                aria-label={recipe.canBeUsedAsIngredient ? 'Basic Recipe - Dapat digunakan sebagai bahan' : 'Regular Recipe - Tidak dapat digunakan sebagai bahan'}
+              >
+                <ChefHat 
+                  className={`h-5 w-5 ${
+                    recipe.canBeUsedAsIngredient 
+                      ? 'text-purple-600' 
+                      : 'text-gray-400'
+                  }`} 
+                />
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80">
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  {recipe.canBeUsedAsIngredient ? 'Basic Recipe' : 'Regular Recipe'}
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {recipe.canBeUsedAsIngredient 
+                    ? 'Resep ini dapat digunakan sebagai bahan dalam resep lain. Berguna untuk resep dasar seperti saus, bumbu, atau komponen yang sering digunakan.'
+                    : 'Resep ini adalah resep standar yang tidak dapat digunakan sebagai bahan dalam resep lain.'
+                  }
+                </p>
+                {recipe.canBeUsedAsIngredient && (
+                  <p className="text-xs text-gray-500">
+                    Contoh: Saus tomat, bumbu dasar, atau kaldu dapat dijadikan Basic Recipe.
+                  </p>
+                )}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        </div>
+      )
+    },
+    {
+      key: 'favorite',
+      header: 'Favorit',
+      render: (recipe) => (
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => handleToggleFavorite(recipe.id)}
+            className={`p-2 rounded-full transition-colors duration-200 ${
+              recipe.isFavorite 
+                ? 'text-yellow-500 hover:text-yellow-600' 
+                : 'text-gray-400 hover:text-yellow-500'
+            }`}
+          >
+            <Heart className={`h-5 w-5 ${recipe.isFavorite ? 'fill-current' : ''}`} />
+          </button>
         </div>
       )
     },
@@ -506,6 +601,62 @@ export default function RecipesPage() {
           </div>
         </div>
 
+        {/* Filter Controls */}
+        <div style={{ 
+              background: "var(--color-panel-solid)"
+            }} 
+            className="rounded-lg border border-gray-200 p-4"
+        >
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Filter:</span>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              {/* Favorite Filter */}
+              <button
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                  showFavoritesOnly
+                    ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${showFavoritesOnly ? 'fill-current text-yellow-600' : ''}`} />
+                Favorit
+              </button>
+
+              {/* Category Filter */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Semua Kategori</option>
+                {categories?.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Clear Filters */}
+              {(showFavoritesOnly || selectedCategory) && (
+                <button
+                  onClick={() => {
+                    setShowFavoritesOnly(false)
+                    setSelectedCategory('')
+                  }}
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                >
+                  Hapus Filter
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         <DataTable
           data={recipes}
           columns={columns}
@@ -530,7 +681,7 @@ export default function RecipesPage() {
               onBulkDelete={handleBulkDelete}
               onBulkExport={handleBulkExport}
               onBulkCategoryChange={handleBulkCategoryChange}
-              categories={categories}
+              categories={categories || []}
               loading={loading}
             />
           }
@@ -571,14 +722,51 @@ export default function RecipesPage() {
                         SKU: <span className="font-mono">{recipe.sku}</span>
                       </div>
                     )}
-                    {recipe.category && (
-                      <span 
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white mt-1"
-                        style={{ backgroundColor: recipe.category.color }}
-                      >
-                        {recipe.category.name}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      {recipe.category && (
+                        <span 
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                          style={{ backgroundColor: recipe.category.color }}
+                        >
+                          {recipe.category.name}
+                        </span>
+                      )}
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <button 
+                            type="button"
+                            className="p-1 rounded-full transition-colors duration-200 hover:bg-gray-100"
+                            aria-label={recipe.canBeUsedAsIngredient ? 'Basic Recipe - Dapat digunakan sebagai bahan' : 'Regular Recipe - Tidak dapat digunakan sebagai bahan'}
+                          >
+                            <ChefHat 
+                              className={`h-4 w-4 ${
+                                recipe.canBeUsedAsIngredient 
+                                  ? 'text-purple-600' 
+                                  : 'text-gray-400'
+                              }`} 
+                            />
+                          </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-80">
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-900">
+                              {recipe.canBeUsedAsIngredient ? 'Basic Recipe' : 'Regular Recipe'}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {recipe.canBeUsedAsIngredient 
+                                ? 'Resep ini dapat digunakan sebagai bahan dalam resep lain. Berguna untuk resep dasar seperti saus, bumbu, atau komponen yang sering digunakan.'
+                                : 'Resep ini adalah resep standar yang tidak dapat digunakan sebagai bahan dalam resep lain.'
+                              }
+                            </p>
+                            {recipe.canBeUsedAsIngredient && (
+                              <p className="text-xs text-gray-500">
+                                Contoh: Saus tomat, bumbu dasar, atau kaldu dapat dijadikan Basic Recipe.
+                              </p>
+                            )}
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    </div>
                   </div>
                 </div>
                                   <div className="text-right flex-shrink-0">
@@ -631,6 +819,15 @@ export default function RecipesPage() {
         src={previewUrl || ''}
         alt="Preview gambar resep"
         title="Preview Gambar Resep"
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
       />
     </DashboardLayout>
   )

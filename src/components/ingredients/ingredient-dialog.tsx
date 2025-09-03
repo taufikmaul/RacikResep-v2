@@ -237,7 +237,10 @@ export function IngredientDialog({ ingredient, isOpen, onClose, onSave }: Ingred
       <div className="p-6 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto">
           {/* Basic Information Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+          <div  style={{ 
+                  background: "var(--color-panel-solid)"
+                }} 
+                className="rounded-xl p-6 shadow-sm border border-blue-100">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">📝</span>
@@ -324,7 +327,10 @@ export function IngredientDialog({ ingredient, isOpen, onClose, onSave }: Ingred
           </div>
 
           {/* Pricing Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-green-100">
+          <div  style={{ 
+                  background: "var(--color-panel-solid)"
+                }} 
+                className="rounded-xl p-6 shadow-sm border border-green-100">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">💰</span>
@@ -391,7 +397,10 @@ export function IngredientDialog({ ingredient, isOpen, onClose, onSave }: Ingred
           </div>
 
           {/* Units & Conversion Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-purple-100">
+          <div  style={{ 
+                  background: "var(--color-panel-solid)"
+                }} 
+                className="rounded-xl p-6 shadow-sm border border-purple-100">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-sm font-bold">📏</span>
@@ -505,7 +514,10 @@ export function IngredientDialog({ ingredient, isOpen, onClose, onSave }: Ingred
               </h3>
             </div>
             
-            <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+            <div  style={{ 
+                  background: "var(--color-panel-solid)"
+                }} 
+                className="rounded-lg p-4 border border-blue-200 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">
                   Harga per {units.find(u => u.id === formData.usageUnitId)?.symbol || 'unit'}:
@@ -532,7 +544,10 @@ export function IngredientDialog({ ingredient, isOpen, onClose, onSave }: Ingred
                 </h3>
               </div>
               
-              <div className="bg-white rounded-lg p-4 border border-orange-200">
+              <div  style={{ 
+                  background: "var(--color-panel-solid)"
+                }} 
+                className="rounded-lg p-4 border border-orange-200">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-gray-700">
                     Total Resep yang Menggunakan:

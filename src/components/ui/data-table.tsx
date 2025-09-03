@@ -243,7 +243,11 @@ export function DataTable<T extends { id: string }>({
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200" 
+                  style={{ 
+                    background: "var(--color-panel-solid)"
+                  }} 
+                >
                   {data.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       {onSelectionChange && (

@@ -12,6 +12,7 @@ import { IngredientImportDialog } from '@/components/ingredients/ingredient-impo
 import { PriceUpdateDialog } from '@/components/ingredients/price-update-dialog'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
+import { ConfirmationDialog } from '@/components/ui/alert-dialog'
 import toast from 'react-hot-toast'
 
 interface Ingredient {
@@ -70,6 +71,19 @@ export default function IngredientsPage() {
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string }>>([])
 
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  })
+
   const fetchIngredients = async () => {
     try {
       const params = new URLSearchParams({
@@ -95,10 +109,10 @@ export default function IngredientsPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories')
+      const response = await fetch('/api/categories?type=ingredient')
       if (response.ok) {
         const result = await response.json()
-        setCategories(result.data)
+        setCategories(result || [])
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -112,20 +126,29 @@ export default function IngredientsPage() {
     }
   }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus bahan ini?')) return
+  const handleDelete = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Bahan',
+      description: 'Apakah Anda yakin ingin menghapus bahan ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/ingredients/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/ingredients/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        fetchIngredients()
+          if (response.ok) {
+            fetchIngredients()
+            toast.success('Bahan berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus bahan')
+          }
+        } catch (error) {
+          console.error('Error deleting ingredient:', error)
+          toast.error('Gagal menghapus bahan')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting ingredient:', error)
-    }
+    })
   }
 
   const handleEdit = (ingredient: Ingredient) => {
@@ -180,33 +203,38 @@ export default function IngredientsPage() {
     setPagination(prev => ({ ...prev, limit, page: 1 }))
   }
 
-  const handleBulkDelete = async (ids: string[]) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${ids.length} bahan yang dipilih?`)) return
-
-    try {
-      const response = await fetch('/api/ingredients/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids })
-      })
-      
-      if (response.ok) {
-        const result = await response.json()
-        setIngredients(ingredients.filter(ingredient => !ids.includes(ingredient.id)))
-        setSelectedItems([])
-        // Refresh data if current page becomes empty
-        if (ingredients.length <= ids.length && pagination.page > 1) {
-          setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+  const handleBulkDelete = (ids: string[]) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Bahan Terpilih',
+      description: `Apakah Anda yakin ingin menghapus ${ids.length} bahan yang dipilih? Tindakan ini tidak dapat dibatalkan.`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch('/api/ingredients/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            setIngredients(ingredients.filter(ingredient => !ids.includes(ingredient.id)))
+            setSelectedItems([])
+            // Refresh data if current page becomes empty
+            if (ingredients.length <= ids.length && pagination.page > 1) {
+              setPagination(prev => ({ ...prev, page: prev.page - 1 }))
+            }
+            toast.success(result.message)
+          } else {
+            const error = await response.json()
+            toast.error(`Gagal menghapus bahan: ${error.error}`)
+          }
+        } catch (error) {
+          console.error('Error bulk deleting ingredients:', error)
+          toast.error('Gagal menghapus bahan yang dipilih')
         }
-        toast.success(result.message)
-      } else {
-        const error = await response.json()
-        toast.error(`Gagal menghapus bahan: ${error.error}`)
       }
-    } catch (error) {
-      console.error('Error bulk deleting ingredients:', error)
-      toast.error('Gagal menghapus bahan yang dipilih')
-    }
+    })
   }
 
   const handleBulkExport = async (ids: string[]) => {
@@ -645,6 +673,15 @@ export default function IngredientsPage() {
             }}
           />
         )}
+
+        {/* Confirmation Dialog */}
+        <ConfirmationDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          onConfirm={confirmDialog.onConfirm}
+        />
       </div>
     </DashboardLayout>
   )

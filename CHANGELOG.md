@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-29
+
+### 🎉 **Price Manager & Enhanced Recipe Management**
+
+#### ✨ **Added**
+- **Advanced Price Manager System**
+  - Comprehensive recipe price management interface
+  - Channel-specific pricing with bulk operations
+  - Price history tracking and visualization
+  - Profit margin analysis and optimization
+  - Bulk price updates across multiple recipes
+  - Sales channel price management
+
+- **Enhanced Recipe Management**
+  - "Basic Recipe" concept for reusable recipe components
+  - Improved recipe categorization with type filtering
+  - Enhanced recipe dialog with COGS summary in footer
+  - Better visual indicators for recipe status
+  - Hover information for recipe features
+
+- **Improved User Experience**
+  - Better category filtering in recipe lists
+  - Enhanced visual feedback with colored icons
+  - Improved dialog layouts and information hierarchy
+  - Better mobile responsiveness for price management
+
+#### 🔧 **Technical Improvements**
+- Enhanced API endpoints for price management
+- Improved database schema for channel pricing
+- Better error handling and user feedback
+- Optimized component structure and performance
+
+#### 🐛 **Fixed**
+- Fixed category filter not loading properly in recipe lists
+- Corrected data access issues in category fetching
+- Improved recipe dialog layout and functionality
+
+---
+
 ## [1.0.0] - 2025-01-29
 
 ### 🎉 **Initial Release - Recipe Management & Cost Analysis System**
@@ -102,6 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+- **1.1.0** - Price Manager & Enhanced Recipe Management
 - **1.0.0** - Initial release with complete recipe management system
 - **0.1.0** - Development version (pre-release)
 

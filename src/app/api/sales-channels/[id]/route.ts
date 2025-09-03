@@ -102,18 +102,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Sales channel not found' }, { status: 404 })
     }
 
-    // Check if sales channel is used
-    const channelPriceCount = await prisma.channelPrice.count({
+    // Delete associated channel prices first (cascade delete)
+    await prisma.channelPrice.deleteMany({
       where: { channelId }
     })
 
-    if (channelPriceCount > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete sales channel that has prices set' },
-        { status: 400 }
-      )
-    }
-
+    // Delete the sales channel
     await prisma.salesChannel.delete({
       where: { id: channelId }
     })
@@ -122,7 +116,7 @@ export async function DELETE(
     await prisma.activityLog.create({
       data: {
         action: 'Hapus Saluran Penjualan',
-        description: `Menghapus saluran penjualan "${existingChannel.name}"`,
+        description: `Menghapus saluran penjualan "${existingChannel.name}" dan semua harga channel terkait`,
         entityType: 'sales_channel',
         entityId: channelId,
         userId

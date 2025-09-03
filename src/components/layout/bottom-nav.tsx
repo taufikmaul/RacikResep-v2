@@ -15,7 +15,7 @@ const items = [
   { href: "/dashboard", label: "Home", Icon: DashboardIcon },
   { href: "/ingredients", label: "Bahan", Icon: MixIcon },
   { href: "/recipes", label: "Resep", Icon: MixerVerticalIcon },
-  { href: "/simulation", label: "Simulasi", Icon: MixerHorizontalIcon },
+  { href: "/recipes/price", label: "Price", Icon: MixerHorizontalIcon },
   { href: "/settings", label: "Pengaturan", Icon: GearIcon },
 ]
 

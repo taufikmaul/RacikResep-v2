@@ -15,6 +15,7 @@ import { FormActions } from '@/components/forms/FormActions'
 import { TextareaField } from '@/components/forms/TextareaField'
 import { Em, Heading, Strong, Text } from '@radix-ui/themes'
 import { ThemeToggleWithLabel } from '@/components/ui/theme-toggle'
+import { ConfirmationDialog } from '@/components/ui/alert-dialog'
 
 
 interface BusinessProfile {
@@ -202,6 +203,19 @@ export default function SettingsPage() {
   const [newChannel, setNewChannel] = useState({
     name: '',
     commission: 0
+  })
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
   })
 
   useEffect(() => {
@@ -488,60 +502,79 @@ export default function SettingsPage() {
     }
   }
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus kategori ini?')) return
+  const handleDeleteCategory = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Kategori',
+      description: 'Apakah Anda yakin ingin menghapus kategori ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/categories/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/categories/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setCategories(categories.filter(cat => cat.id !== id))
-        toast.success('Kategori berhasil dihapus')
-      } else {
-        toast.error('Gagal menghapus kategori')
+          if (response.ok) {
+            setCategories(categories.filter(cat => cat.id !== id))
+            toast.success('Kategori berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus kategori')
+          }
+        } catch (error) {
+          console.error('Error deleting category:', error)
+          toast.error('Gagal menghapus kategori')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting category:', error)
-      toast.error('Gagal menghapus kategori')
-    }
+    })
   }
 
-  const handleDeleteUnit = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus satuan ini?')) return
+  const handleDeleteUnit = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Satuan',
+      description: 'Apakah Anda yakin ingin menghapus satuan ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/units/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/units/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setUnits(units.filter(unit => unit.id !== id))
-        toast.success('Satuan berhasil dihapus')
-      } else {
-        toast.error('Gagal menghapus satuan')
+          if (response.ok) {
+            setUnits(units.filter(unit => unit.id !== id))
+            toast.success('Satuan berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus satuan')
+          }
+        } catch (error) {
+          console.error('Error deleting unit:', error)
+          toast.error('Gagal menghapus satuan')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting unit:', error)
-      toast.error('Gagal menghapus satuan')
-    }
+    })
   }
 
-  const handleDeleteChannel = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus channel ini?')) return
+  const handleDeleteChannel = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Channel',
+      description: 'Apakah Anda yakin ingin menghapus channel ini? Semua harga channel terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/sales-channels/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/sales-channels/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setSalesChannels(prev => prev.filter(ch => ch.id !== id))
+          if (response.ok) {
+            setSalesChannels(prev => prev.filter(ch => ch.id !== id))
+            toast.success('Channel berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus channel')
+          }
+        } catch (error) {
+          console.error('Error deleting channel:', error)
+          toast.error('Gagal menghapus channel')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting channel:', error)
-    }
+    })
   }
 
   if (loading) {
@@ -1562,6 +1595,15 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+      />
     </DashboardLayout>
   )
 }

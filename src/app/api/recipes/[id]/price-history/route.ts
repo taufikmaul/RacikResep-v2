@@ -39,7 +39,13 @@ export async function GET(
       }
     })
 
-    return NextResponse.json(priceHistory)
+    // Add COGS information to each history entry for margin calculation
+    const priceHistoryWithMargins = priceHistory.map(history => ({
+      ...history,
+      cogsPerServing: recipe.cogsPerServing
+    }))
+
+    return NextResponse.json(priceHistoryWithMargins)
 
   } catch (error) {
     console.error('Error fetching recipe price history:', error)

@@ -29,11 +29,19 @@ export async function GET(request: NextRequest) {
     
     // Filter parameters
     const canBeUsedAsIngredient = searchParams.get('canBeUsedAsIngredient')
+    const favorites = searchParams.get('favorites')
+    const category = searchParams.get('category')
 
     // Build where clause
     const whereClause: any = { businessId }
     if (canBeUsedAsIngredient === 'true') {
       whereClause.canBeUsedAsIngredient = true
+    }
+    if (favorites === 'true') {
+      whereClause.isFavorite = true
+    }
+    if (category) {
+      whereClause.categoryId = category
     }
     if (search) {
       whereClause.OR = [
@@ -173,6 +181,7 @@ export async function POST(request: NextRequest) {
       operationalCost,
       packagingCost,
       canBeUsedAsIngredient,
+      isFavorite,
       categoryId,
       ingredients,
       subRecipes
@@ -276,6 +285,7 @@ export async function POST(request: NextRequest) {
         operationalCost,
         packagingCost,
         canBeUsedAsIngredient,
+        ...(isFavorite !== undefined && { isFavorite }),
         costPerUnit,
         totalCOGS,
         cogsPerServing,

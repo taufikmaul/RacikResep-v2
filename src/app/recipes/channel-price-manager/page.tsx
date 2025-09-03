@@ -9,26 +9,25 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DataTable, Column, PaginationInfo } from '@/components/ui/data-table'
 import { 
-  Calculator, 
+  DollarSign, 
   TrendingUp, 
   TrendingDown, 
-  DollarSign, 
   History,
   Save,
   RefreshCw,
   Search,
   Filter,
-  FileText
+  FileText,
+  Store,
+  Calculator
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
-import { PriceHistoryDialog } from '@/components/recipes/price-history-dialog'
-import { PriceUpdateDialog } from '@/components/recipes/price-update-dialog'
-import { BulkPriceDialog } from '@/components/recipes/bulk-price-dialog'
-import { ImportExportDialog } from '@/components/recipes/import-export-dialog'
 import { ChannelPriceDialog } from '@/components/recipes/channel-price-dialog'
 import { ChannelPriceHistoryDialog } from '@/components/recipes/channel-price-history-dialog'
+import { ChannelBulkActions } from '@/components/recipes/channel-bulk-actions'
+import { SalesChannelPriceHistoryDialog } from '@/components/recipes/sales-channel-price-history-dialog'
 
 interface Recipe {
   id: string
@@ -36,43 +35,51 @@ interface Recipe {
   sku?: string
   description?: string
   cogsPerServing: number
-  basePrice: number
   sellingPrice: number
-  profitMargin: number
-  marginType: string
   category?: {
     id: string
     name: string
     color: string
   }
+  channelPrices?: {
+    [channelId: string]: {
+      price: number
+      finalPrice: number
+      channelName: string
+    }
+  }
 }
 
-interface PriceHistory {
+interface SalesChannel {
   id: string
-  oldPrice: number
-  newPrice: number
-  priceChange: number
-  percentageChange: number
-  changeType: string
-  changeDate: string
-  reason?: string
-  cogsPerServing: number
+  name: string
+  commission: number
 }
 
-export default function RecipePriceManagerPage() {
+interface ChannelPrice {
+  channelId: string
+  channelName: string
+  channelCommission: number
+  price: number
+  finalPrice: number
+  commission: number
+  taxRate: number
+  channelPriceId: string | null
+}
+
+export default function ChannelPriceManagerPage() {
   const { data: session } = useSession()
   const { settings: decimalSettings } = useDecimalSettings()
   const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [salesChannels, setSalesChannels] = useState<SalesChannel[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
-  const [showPriceHistory, setShowPriceHistory] = useState(false)
-  const [showPriceUpdate, setShowPriceUpdate] = useState(false)
   const [showChannelPrice, setShowChannelPrice] = useState(false)
   const [showChannelPriceHistory, setShowChannelPriceHistory] = useState(false)
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([])
   const [channelPriceHistory, setChannelPriceHistory] = useState<any[]>([])
   const [selectedChannel, setSelectedChannel] = useState<{id: string, name: string} | null>(null)
+  const [showSalesChannelPriceHistory, setShowSalesChannelPriceHistory] = useState(false)
   
   // Pagination state
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -86,46 +93,111 @@ export default function RecipePriceManagerPage() {
   const [sortBy, setSortBy] = useState('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [showBulk, setShowBulk] = useState(false)
-  const [showImportExport, setShowImportExport] = useState(false)
 
   const selectedRecipes = recipes.filter(r => selectedIds.includes(r.id))
 
   useEffect(() => {
     if (session?.user?.business?.id) {
-      fetchRecipes()
+      fetchData()
     } else if (session === null) {
-      // Session is explicitly null (not loading), set loading to false
       setLoading(false)
     }
   }, [session])
 
-  const fetchRecipes = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true)
+      await Promise.all([
+        fetchRecipes(),
+        fetchSalesChannels()
+      ])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast.error('Gagal memuat data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchRecipes = async () => {
+    try {
       const response = await fetch('/api/recipes/price-manager')
       if (response.ok) {
         const data = await response.json()
         const recipesData = Array.isArray(data) ? data : []
-        // Ensure we only set valid recipes with required properties
         const validRecipes = recipesData.filter(recipe => 
           recipe && 
           typeof recipe === 'object' && 
           recipe.id && 
           recipe.name
         )
-        setRecipes(validRecipes)
         
-        // Update pagination
-        updatePagination(validRecipes)
+        // Fetch channel prices for all recipes
+        const recipeIds = validRecipes.map(recipe => recipe.id)
+        const channelPricesMap = await fetchChannelPrices(recipeIds)
+        
+        // Add channel prices to recipes
+        const recipesWithChannelPrices = validRecipes.map(recipe => ({
+          ...recipe,
+          channelPrices: channelPricesMap[recipe.id] || {}
+        }))
+        
+        setRecipes(recipesWithChannelPrices)
+        updatePagination(recipesWithChannelPrices)
       }
     } catch (error) {
       console.error('Error fetching recipes:', error)
       toast.error('Gagal memuat data resep')
       setRecipes([])
       updatePagination([])
-    } finally {
-      setLoading(false)
+    }
+  }
+
+  const fetchSalesChannels = async () => {
+    try {
+      const response = await fetch('/api/sales-channels')
+      if (response.ok) {
+        const data = await response.json()
+        setSalesChannels(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching sales channels:', error)
+      toast.error('Gagal memuat data saluran penjualan')
+      setSalesChannels([])
+    }
+  }
+
+  const fetchChannelPrices = async (recipeIds: string[]) => {
+    try {
+      if (recipeIds.length === 0) return {}
+      
+      const channelPricesMap: { [recipeId: string]: { [channelId: string]: { price: number, finalPrice: number, channelName: string } } } = {}
+      
+      // Fetch channel prices for each recipe
+      await Promise.all(recipeIds.map(async (recipeId) => {
+        try {
+          const response = await fetch(`/api/recipes/${recipeId}/channel-prices`)
+          if (response.ok) {
+            const channelPrices = await response.json()
+            channelPricesMap[recipeId] = {}
+            
+            channelPrices.forEach((cp: any) => {
+              channelPricesMap[recipeId][cp.channelId] = {
+                price: cp.price,
+                finalPrice: cp.finalPrice,
+                channelName: cp.channelName
+              }
+            })
+          }
+        } catch (error) {
+          console.error(`Error fetching channel prices for recipe ${recipeId}:`, error)
+        }
+      }))
+      
+      return channelPricesMap
+    } catch (error) {
+      console.error('Error fetching channel prices:', error)
+      return {}
     }
   }
 
@@ -148,7 +220,6 @@ export default function RecipePriceManagerPage() {
     setSearch(searchTerm)
     setPagination(prev => ({ ...prev, page: 1 }))
     
-    // Fetch recipes with search term
     try {
       setLoading(true)
       const response = await fetch(`/api/recipes/price-manager?search=${encodeURIComponent(searchTerm)}`)
@@ -161,8 +232,19 @@ export default function RecipePriceManagerPage() {
           recipe.id && 
           recipe.name
         )
-        setRecipes(validRecipes)
-        updatePagination(validRecipes)
+        
+        // Fetch channel prices for search results
+        const recipeIds = validRecipes.map(recipe => recipe.id)
+        const channelPricesMap = await fetchChannelPrices(recipeIds)
+        
+        // Add channel prices to recipes
+        const recipesWithChannelPrices = validRecipes.map(recipe => ({
+          ...recipe,
+          channelPrices: channelPricesMap[recipe.id] || {}
+        }))
+        
+        setRecipes(recipesWithChannelPrices)
+        updatePagination(recipesWithChannelPrices)
       }
     } catch (error) {
       console.error('Error searching recipes:', error)
@@ -240,50 +322,6 @@ export default function RecipePriceManagerPage() {
     return filtered.slice(startIndex, endIndex)
   }
 
-  const getProfitMarginColor = (margin: number) => {
-    if (margin >= 30) return 'bg-green-100 text-green-800 hover:bg-green-200'
-    if (margin >= 20) return 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-    if (margin >= 10) return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-    return 'bg-red-100 text-red-800 hover:bg-red-200'
-  }
-
-  const getChangeTypeIcon = (changeType: string) => {
-    switch (changeType) {
-      case 'increase':
-        return <TrendingUp className="h-4 w-4 text-green-600" />
-      case 'decrease':
-        return <TrendingDown className="h-4 w-4 text-red-600" />
-      default:
-        return <TrendingUp className="h-4 w-4 text-gray-600" />
-    }
-  }
-
-  const handleViewPriceHistory = async (recipe: Recipe) => {
-    if (!recipe) return
-    try {
-      const response = await fetch(`/api/recipes/${recipe.id}/price-history`)
-      if (response.ok) {
-        const data = await response.json()
-        setPriceHistory(data || [])
-        setSelectedRecipe(recipe)
-        setShowPriceHistory(true)
-      } else {
-        toast.error('Gagal memuat riwayat harga')
-      }
-    } catch (error) {
-      console.error('Error fetching price history:', error)
-      toast.error('Gagal memuat riwayat harga')
-    }
-  }
-
-  const handleUpdatePrice = (recipe: Recipe) => {
-    if (!recipe) return
-    console.log('Opening price update dialog for recipe:', recipe)
-    console.log('Recipe sellingPrice:', recipe.sellingPrice, 'Type:', typeof recipe.sellingPrice)
-    setSelectedRecipe(recipe)
-    setShowPriceUpdate(true)
-  }
-
   const handleChannelPrice = (recipe: Recipe) => {
     if (!recipe) return
     setSelectedRecipe(recipe)
@@ -309,16 +347,95 @@ export default function RecipePriceManagerPage() {
     }
   }
 
-  const handlePriceUpdated = () => {
-    setShowPriceUpdate(false)
-    fetchRecipes()
-    toast.success('Harga berhasil diperbarui')
-  }
-
   const handleChannelPricesUpdated = () => {
     setShowChannelPrice(false)
     fetchRecipes()
     toast.success('Harga channel berhasil diperbarui')
+  }
+
+  const handleSalesChannelPriceHistory = (recipe: Recipe) => {
+    if (!recipe) return
+    setSelectedRecipe(recipe)
+    setShowSalesChannelPriceHistory(true)
+  }
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      const response = await fetch('/api/recipes/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ recipeIds: ids })
+      })
+
+      if (response.ok) {
+        setSelectedIds([])
+        fetchRecipes()
+        toast.success(`Berhasil menghapus ${ids.length} resep`)
+      } else {
+        toast.error('Gagal menghapus resep')
+      }
+    } catch (error) {
+      console.error('Error deleting recipes:', error)
+      toast.error('Gagal menghapus resep')
+    }
+  }
+
+  const handleBulkExport = async (ids: string[]) => {
+    try {
+      const response = await fetch('/api/recipes/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ recipeIds: ids })
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `recipes-export-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success(`Berhasil mengekspor ${ids.length} resep`)
+      } else {
+        toast.error('Gagal mengekspor resep')
+      }
+    } catch (error) {
+      console.error('Error exporting recipes:', error)
+      toast.error('Gagal mengekspor resep')
+    }
+  }
+
+  const handleBulkPriceUpdate = async (ids: string[], priceData: any) => {
+    try {
+      const response = await fetch('/api/recipes/bulk-channel-price', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          recipeIds: ids,
+          ...priceData
+        })
+      })
+
+      if (response.ok) {
+        setSelectedIds([])
+        fetchRecipes()
+        toast.success(`Berhasil memperbarui harga channel untuk ${ids.length} resep`)
+      } else {
+        toast.error('Gagal memperbarui harga channel')
+      }
+    } catch (error) {
+      console.error('Error updating channel prices:', error)
+      toast.error('Gagal memperbarui harga channel')
+    }
   }
 
   // Update pagination when recipes or search changes
@@ -364,37 +481,47 @@ export default function RecipePriceManagerPage() {
       )
     },
     {
-      key: 'cogsPerServing',
-      header: 'HPP per Unit',
-      sortable: true,
+      key: 'pricing',
+      header: 'Pricing Information',
       render: (recipe) => (
-        <span className="font-medium text-gray-900">
-          {recipe.cogsPerServing ? (decimalSettings ? formatCurrency(recipe.cogsPerServing, decimalSettings) : `Rp ${recipe.cogsPerServing.toLocaleString('id-ID')}`) : 'Rp 0'}
-        </span>
+        <div className="space-y-2 min-w-[200px]">
+          {/* COGS */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500">COGS:</span>
+            <span className="text-sm font-medium text-gray-900">
+              {recipe.cogsPerServing ? (decimalSettings ? formatCurrency(recipe.cogsPerServing, decimalSettings) : `Rp ${recipe.cogsPerServing.toLocaleString('id-ID')}`) : 'Rp 0'}
+            </span>
+          </div>
+          
+          {/* Base Price */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500">Base Price:</span>
+            <span className="text-sm font-medium text-blue-600">
+              {recipe.sellingPrice ? (decimalSettings ? formatCurrency(recipe.sellingPrice, decimalSettings) : `Rp ${recipe.sellingPrice.toLocaleString('id-ID')}`) : 'Rp 0'}
+            </span>
+          </div>
+          
+          {/* Channel Prices */}
+          {salesChannels.map(channel => {
+            const channelPrice = recipe.channelPrices?.[channel.id]
+            return (
+              <div key={channel.id} className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 truncate">{channel.name} {channel.commission ? `(${channel.commission}%)` : ''} :</span>
+                {channelPrice ? (
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-green-600">
+                      {decimalSettings ? formatCurrency(channelPrice.price, decimalSettings) : `Rp ${channelPrice.price.toLocaleString('id-ID')}`}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400">-</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
       ),
-      className: 'text-center'
-    },
-    {
-      key: 'sellingPrice',
-      header: 'Harga Jual',
-      sortable: true,
-      render: (recipe) => (
-        <span className="font-medium text-blue-600">
-          {recipe.sellingPrice ? (decimalSettings ? formatCurrency(recipe.sellingPrice, decimalSettings) : `Rp ${recipe.sellingPrice.toLocaleString('id-ID')}`) : 'Rp 0'}
-        </span>
-      ),
-      className: 'text-center'
-    },
-    {
-      key: 'profitMargin',
-      header: 'Margin Profit',
-      sortable: true,
-      render: (recipe) => (
-        <Badge className={getProfitMarginColor(recipe.profitMargin || 0)}>
-          {recipe.profitMargin ? recipe.profitMargin.toFixed(1) : '0.0'}%
-        </Badge>
-      ),
-      className: 'text-center'
+      className: 'min-w-[200px]'
     },
     {
       key: 'actions',
@@ -402,36 +529,40 @@ export default function RecipePriceManagerPage() {
       render: (recipe) => (
         <div className="flex flex-col gap-2">
           <Button
-            onClick={() => handleUpdatePrice(recipe)}
-            size="sm"
-            className="w-full"
-            disabled={!recipe}
-          >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Update Price
-          </Button>
-          <Button
             onClick={() => handleChannelPrice(recipe)}
             size="sm"
             className="w-full"
             disabled={!recipe}
           >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Channel Prices
+            <Store className="h-4 w-4 mr-2" />
+            Kelola Channel
           </Button>
           <Button
-            onClick={() => handleViewPriceHistory(recipe)}
+            onClick={() => handleSalesChannelPriceHistory(recipe)}
             variant="outline"
             size="sm"
-            className="w-full"
+            className="w-full text-xs"
             disabled={!recipe}
           >
-            <History className="h-4 w-4 mr-2" />
-            Price History
+            <History className="h-3 w-3 mr-1" />
+            All Channels
           </Button>
+          {salesChannels.map(channel => (
+            <Button
+              key={channel.id}
+              onClick={() => handleViewChannelPriceHistory(recipe, channel.id, channel.name)}
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              disabled={!recipe}
+            >
+              <History className="h-3 w-3 mr-1" />
+              {channel.name}
+            </Button>
+          ))}
         </div>
       ),
-      className: 'w-32'
+      className: 'w-40'
     }
   ]
 
@@ -459,68 +590,58 @@ export default function RecipePriceManagerPage() {
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">HPP per Unit</p>
-          <p className="text-sm font-semibold text-gray-900">
+      <div className="space-y-3">
+        <p className="text-xs text-gray-500 font-medium">Pricing Information:</p>
+        
+        {/* COGS */}
+        <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+          <span className="text-xs font-medium text-gray-700">COGS:</span>
+          <span className="text-sm font-semibold text-gray-900">
             {recipe.cogsPerServing ? (decimalSettings ? formatCurrency(recipe.cogsPerServing, decimalSettings) : `Rp ${recipe.cogsPerServing.toLocaleString('id-ID')}`) : 'Rp 0'}
-          </p>
+          </span>
         </div>
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Harga Jual</p>
-          <p className="text-sm font-semibold text-blue-600">
+        
+        {/* Base Price */}
+        <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+          <span className="text-xs font-medium text-gray-700">Base Price:</span>
+          <span className="text-sm font-semibold text-blue-600">
             {recipe.sellingPrice ? (decimalSettings ? formatCurrency(recipe.sellingPrice, decimalSettings) : `Rp ${recipe.sellingPrice.toLocaleString('id-ID')}`) : 'Rp 0'}
-          </p>
+          </span>
         </div>
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Margin Profit</p>
-          <Badge className={`text-xs ${getProfitMarginColor(recipe.profitMargin || 0)}`}>
-            {recipe.profitMargin ? recipe.profitMargin.toFixed(1) : '0.0'}%
-          </Badge>
-        </div>
+        
+        {/* Channel Prices */}
+        {salesChannels.map(channel => {
+          const channelPrice = recipe.channelPrices?.[channel.id]
+          return (
+            <div key={channel.id} className="flex justify-between items-center p-2 bg-green-50 rounded">
+              <span className="text-xs font-medium text-gray-700">{channel.name}:</span>
+              {channelPrice ? (
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-green-600">
+                    {decimalSettings ? formatCurrency(channelPrice.price, decimalSettings) : `Rp ${channelPrice.price.toLocaleString('id-ID')}`}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Final: {decimalSettings ? formatCurrency(channelPrice.finalPrice, decimalSettings) : `Rp ${channelPrice.finalPrice.toLocaleString('id-ID')}`}
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xs text-gray-400">-</span>
+              )}
+            </div>
+          )
+        })}
       </div>
       
       <div className="flex gap-2">
-        <Button
-          onClick={() => handleUpdatePrice(recipe)}
-          size="sm"
-          className="flex-1"
-          disabled={!recipe}
-        >
-          <DollarSign className="h-4 w-4 mr-2" />
-          Update Price
-        </Button>
         <Button
           onClick={() => handleChannelPrice(recipe)}
           size="sm"
           className="flex-1"
           disabled={!recipe}
         >
-          <DollarSign className="h-4 w-4 mr-2" />
-          Channel Prices
+          <Store className="h-4 w-4 mr-2" />
+          Kelola Channel
         </Button>
-        <Button
-          onClick={() => handleViewPriceHistory(recipe)}
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          disabled={!recipe}
-        >
-          <History className="h-4 w-4 mr-2" />
-          Price History
-        </Button>
-      </div>
-    </div>
-  )
-
-  const bulkActions = (
-    <div className="flex items-center justify-between p-3 border-b">
-      <div className="text-sm text-gray-600">
-        {selectedIds.length} dipilih
-      </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>Bersihkan</Button>
-        <Button size="sm" onClick={() => setShowBulk(true)} disabled={selectedIds.length === 0}>Ubah harga massal</Button>
       </div>
     </div>
   )
@@ -531,11 +652,11 @@ export default function RecipePriceManagerPage() {
         <div className="container mx-auto p-4 space-y-6">
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center gap-2 text-blue-600">
-              <Calculator className="h-6 w-6" />
-              <h1 className="text-3xl font-bold">Recipe Price Manager</h1>
+              <Store className="h-6 w-6" />
+              <h1 className="text-3xl font-bold">Channel Price Manager</h1>
             </div>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Kelola harga jual resep dengan mudah dan pantau riwayat perubahan harga
+              Kelola harga jual per saluran penjualan untuk setiap resep
             </p>
           </div>
           <Card>
@@ -561,25 +682,17 @@ export default function RecipePriceManagerPage() {
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2 text-blue-600">
-            <Calculator className="h-6 w-6" />
-            <h1 className="text-3xl font-bold">Recipe Price Manager</h1>
+            <Store className="h-6 w-6" />
+            <h1 className="text-3xl font-bold">Channel Price Manager</h1>
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Kelola harga jual resep dengan mudah dan pantau riwayat perubahan harga
+            Kelola harga jual per saluran penjualan untuk setiap resep
           </p>
           
           {/* Action Buttons */}
           <div className="flex items-center justify-center gap-3">
             <Button
-              onClick={() => setShowImportExport(true)}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Import/Export CSV
-            </Button>
-            <Button
-              onClick={fetchRecipes}
+              onClick={fetchData}
               variant="outline"
               className="flex items-center gap-2"
             >
@@ -604,58 +717,34 @@ export default function RecipePriceManagerPage() {
           onLimitChange={handleLimitChange}
           searchPlaceholder="🔍 Cari resep berdasarkan nama, SKU, atau deskripsi..."
           renderItemCard={renderRecipeCard}
+          selectedItems={selectedIds}
+          onSelectionChange={setSelectedIds}
+          bulkActions={
+            <ChannelBulkActions
+              data={getPaginatedRecipes()}
+              selectedItems={selectedIds}
+              onSelectionChange={setSelectedIds}
+              onBulkDelete={handleBulkDelete}
+              onBulkExport={handleBulkExport}
+              onBulkPriceUpdate={handleBulkPriceUpdate}
+              loading={loading}
+            />
+          }
           emptyState={
             <div className="text-center py-8">
-              <Calculator className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500 text-lg">
                 {search ? 'Tidak ada resep yang cocok dengan pencarian' : 'Belum ada resep tersedia'}
               </p>
               {!search && (
-                <Button onClick={fetchRecipes} className="mt-4">
+                <Button onClick={fetchData} className="mt-4">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Data
                 </Button>
               )}
             </div>
           }
-          bulkActions={bulkActions}
-          selectedItems={selectedIds}
-          onSelectionChange={setSelectedIds}
         />
-
-        {/* Bulk dialog */}
-        <BulkPriceDialog
-          isOpen={showBulk}
-          onClose={() => setShowBulk(false)}
-          selectedIds={selectedIds}
-          selectedRecipes={selectedRecipes as any}
-          onUpdated={(count) => {
-            setShowBulk(false)
-            setSelectedIds([])
-            fetchRecipes()
-            toast.success(`${count} harga resep diperbarui`)
-          }}
-        />
-
-        {/* Price History Dialog */}
-        {selectedRecipe && (
-          <PriceHistoryDialog
-            isOpen={showPriceHistory}
-            onClose={() => setShowPriceHistory(false)}
-            recipe={selectedRecipe}
-            priceHistory={priceHistory}
-          />
-        )}
-
-        {/* Price Update Dialog */}
-        {selectedRecipe && (
-          <PriceUpdateDialog
-            isOpen={showPriceUpdate}
-            onClose={() => setShowPriceUpdate(false)}
-            recipe={selectedRecipe}
-            onPriceUpdated={handlePriceUpdated}
-          />
-        )}
 
         {/* Channel Price Dialog */}
         {selectedRecipe && (
@@ -678,15 +767,15 @@ export default function RecipePriceManagerPage() {
           />
         )}
 
-        {/* Import/Export Dialog */}
-        <ImportExportDialog
-          isOpen={showImportExport}
-          onClose={() => setShowImportExport(false)}
-          onImportComplete={() => {
-            fetchRecipes()
-            setShowImportExport(false)
-          }}
-        />
+        {/* Sales Channel Price History Dialog */}
+        {selectedRecipe && (
+          <SalesChannelPriceHistoryDialog
+            isOpen={showSalesChannelPriceHistory}
+            onClose={() => setShowSalesChannelPriceHistory(false)}
+            recipeName={selectedRecipe.name}
+            recipeId={selectedRecipe.id}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
