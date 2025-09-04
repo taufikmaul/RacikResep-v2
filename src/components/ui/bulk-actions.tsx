@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react'
 import { Button } from './button'
 import { Checkbox } from './checkbox'
 import { TrashIcon, DownloadIcon, Pencil1Icon, DotsHorizontalIcon, Cross1Icon, UpdateIcon } from '@radix-ui/react-icons'
+import { ChefHat, Heart } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './dropdown-menu'
+import { ConfirmationDialog } from './alert-dialog'
 
 interface BulkActionsProps<T> {
   data: T[]
@@ -13,6 +22,8 @@ interface BulkActionsProps<T> {
   onBulkExport?: (ids: string[]) => void
   onBulkEdit?: (ids: string[]) => void
   onBulkCategoryChange?: (ids: string[], categoryId: string) => void
+  onBulkSetBasicRecipe?: (ids: string[], isBasic: boolean) => void
+  onBulkSetFavorite?: (ids: string[], isFavorite: boolean) => void
   categories?: Array<{ id: string; name: string; color: string }>
   loading?: boolean
 }
@@ -25,11 +36,24 @@ export function BulkActions<T extends { id: string }>({
   onBulkExport,
   onBulkEdit,
   onBulkCategoryChange,
+  onBulkSetBasicRecipe,
+  onBulkSetFavorite,
   categories = [],
   loading = false
 }: BulkActionsProps<T>) {
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  })
 
   const handleSelectAll = () => {
     if (selectedItems.length === data.length) {
@@ -47,15 +71,20 @@ export function BulkActions<T extends { id: string }>({
     }
   }
 
-  const handleBulkDelete = async () => {
-    if (confirm(`Apakah Anda yakin ingin menghapus ${selectedItems.length} item yang dipilih?`)) {
-      setIsProcessing(true)
-      try {
-        await onBulkDelete(selectedItems)
-      } finally {
-        setIsProcessing(false)
+  const handleBulkDelete = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Item Terpilih',
+      description: `Apakah Anda yakin ingin menghapus ${selectedItems.length} item yang dipilih? Tindakan ini tidak dapat dibatalkan.`,
+      onConfirm: async () => {
+        setIsProcessing(true)
+        try {
+          await onBulkDelete(selectedItems)
+        } finally {
+          setIsProcessing(false)
+        }
       }
-    }
+    })
   }
 
   const handleBulkExport = async () => {
@@ -92,6 +121,28 @@ export function BulkActions<T extends { id: string }>({
     }
   }
 
+  const handleBulkSetBasicRecipe = async (isBasic: boolean) => {
+    if (onBulkSetBasicRecipe) {
+      setIsProcessing(true)
+      try {
+        await onBulkSetBasicRecipe(selectedItems, isBasic)
+      } finally {
+        setIsProcessing(false)
+      }
+    }
+  }
+
+  const handleBulkSetFavorite = async (isFavorite: boolean) => {
+    if (onBulkSetFavorite) {
+      setIsProcessing(true)
+      try {
+        await onBulkSetFavorite(selectedItems, isFavorite)
+      } finally {
+        setIsProcessing(false)
+      }
+    }
+  }
+
   if (data.length === 0) return null
 
   return (
@@ -114,6 +165,7 @@ export function BulkActions<T extends { id: string }>({
 
           {selectedItems.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
+              {/* Delete button - always visible */}
               <Button
                 variant="outline"
                 size="sm"
@@ -129,67 +181,100 @@ export function BulkActions<T extends { id: string }>({
                 Hapus ({selectedItems.length})
               </Button>
 
-              {onBulkExport && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkExport}
-                  disabled={loading || isProcessing}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                >
-                  {isProcessing ? (
-                    <UpdateIcon className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <DownloadIcon className="h-4 w-4 mr-1" />
-                  )}
-                  Export ({selectedItems.length})
-                </Button>
-              )}
-
-              {onBulkEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkEdit}
-                  disabled={loading || isProcessing}
-                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                >
-                  {isProcessing ? (
-                    <UpdateIcon className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <Pencil1Icon className="h-4 w-4 mr-1" />
-                  )}
-                  Edit ({selectedItems.length})
-                </Button>
-              )}
-
-              {onBulkCategoryChange && categories.length > 0 && (
-                <div className="relative">
+              {/* Dropdown menu for other bulk actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowCategoryMenu(!showCategoryMenu)}
                     disabled={loading || isProcessing}
-                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                    className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
                   >
-                    <DotsHorizontalIcon className="h-4 w-4 mr-1" />
-                    Ubah Kategori
+                    {isProcessing ? (
+                      <UpdateIcon className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <DotsHorizontalIcon className="h-4 w-4 mr-1" />
+                    )}
+                    Aksi Lainnya ({selectedItems.length})
                   </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {/* Export */}
+                  {onBulkExport && (
+                    <DropdownMenuItem
+                      onClick={handleBulkExport}
+                      disabled={loading || isProcessing}
+                      className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                    >
+                      <DownloadIcon className="h-4 w-4 mr-2" />
+                      Export ({selectedItems.length})
+                    </DropdownMenuItem>
+                  )}
 
-                  {showCategoryMenu && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                      <div className="p-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Pilih Kategori</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowCategoryMenu(false)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Cross1Icon className="h-3 w-3" />
-                          </Button>
-                        </div>
+                  {/* Edit */}
+                  {onBulkEdit && (
+                    <DropdownMenuItem
+                      onClick={handleBulkEdit}
+                      disabled={loading || isProcessing}
+                      className="text-green-600 focus:text-green-700 focus:bg-green-50"
+                    >
+                      <Pencil1Icon className="h-4 w-4 mr-2" />
+                      Edit ({selectedItems.length})
+                    </DropdownMenuItem>
+                  )}
+
+                  {/* Set Basic Recipe */}
+                  {onBulkSetBasicRecipe && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleBulkSetBasicRecipe(true)}
+                        disabled={loading || isProcessing}
+                        className="text-purple-600 focus:text-purple-700 focus:bg-purple-50"
+                      >
+                        <ChefHat className="h-4 w-4 mr-2" />
+                        Set Basic Recipe ({selectedItems.length})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleBulkSetBasicRecipe(false)}
+                        disabled={loading || isProcessing}
+                        className="text-gray-600 focus:text-gray-700 focus:bg-gray-50"
+                      >
+                        <ChefHat className="h-4 w-4 mr-2" />
+                        Unset Basic Recipe ({selectedItems.length})
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  {/* Set Favorite */}
+                  {onBulkSetFavorite && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleBulkSetFavorite(true)}
+                        disabled={loading || isProcessing}
+                        className="text-yellow-600 focus:text-yellow-700 focus:bg-yellow-50"
+                      >
+                        <Heart className="h-4 w-4 mr-2" />
+                        Set Favorite ({selectedItems.length})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleBulkSetFavorite(false)}
+                        disabled={loading || isProcessing}
+                        className="text-gray-600 focus:text-gray-700 focus:bg-gray-50"
+                      >
+                        <Heart className="h-4 w-4 mr-2" />
+                        Unset Favorite ({selectedItems.length})
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  {/* Category Change */}
+                  {onBulkCategoryChange && categories.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5">
+                        <div className="text-sm font-medium text-gray-700 mb-1">Ubah Kategori</div>
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {categories.map((category) => (
                             <button
@@ -206,10 +291,10 @@ export function BulkActions<T extends { id: string }>({
                           ))}
                         </div>
                       </div>
-                    </div>
+                    </>
                   )}
-                </div>
-              )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
@@ -226,6 +311,18 @@ export function BulkActions<T extends { id: string }>({
           </Button>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        variant="destructive"
+      />
     </div>
   )
 }

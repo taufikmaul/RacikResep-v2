@@ -98,7 +98,9 @@ export function PriceUpdateDialog({ ingredient, isOpen, onClose, onUpdate }: Pri
       <div className="p-6 bg-gradient-to-br from-green-50 via-white to-emerald-50">
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {/* Current Price Display */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-green-100">
+          <div  style={{ 
+        background: "var(--color-panel-solid)"
+      }} className="rounded-xl p-6 shadow-sm border border-green-100">
             <h3 className="text-lg font-semibold text-green-700 mb-4">Harga Saat Ini</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -117,7 +119,9 @@ export function PriceUpdateDialog({ ingredient, isOpen, onClose, onUpdate }: Pri
           </div>
 
           {/* New Price Input */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+          <div  style={{ 
+        background: "var(--color-panel-solid)"
+      }} className="rounded-xl p-6 shadow-sm border border-blue-100">
             <h3 className="text-lg font-semibold text-blue-700 mb-4">Harga Baru</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -150,7 +154,9 @@ export function PriceUpdateDialog({ ingredient, isOpen, onClose, onUpdate }: Pri
 
           {/* Price Change Preview */}
           {priceChange !== 0 && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-orange-100">
+            <div  style={{ 
+        background: "var(--color-panel-solid)"
+      }} className="rounded-xl p-6 shadow-sm border border-orange-100">
               <h3 className="text-lg font-semibold text-orange-700 mb-4">Preview Perubahan</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-center p-4 rounded-lg border">
@@ -172,7 +178,9 @@ export function PriceUpdateDialog({ ingredient, isOpen, onClose, onUpdate }: Pri
           )}
 
           {/* Price History */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-purple-100">
+          <div  style={{ 
+        background: "var(--color-panel-solid)"
+      }} className="rounded-xl p-6 shadow-sm border border-purple-100">
             <PriceHistoryDisplay ingredientId={ingredient.id} currentPrice={ingredient.purchasePrice} />
           </div>
 

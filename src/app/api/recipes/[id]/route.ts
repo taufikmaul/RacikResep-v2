@@ -4,6 +4,65 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateSku } from '@/lib/sku'
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.business?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const businessId = session.user.business.id
+    const { id: recipeId } = await params
+
+    // Check if recipe belongs to user's business
+    const existingRecipe = await prisma.recipe.findFirst({
+      where: {
+        id: recipeId,
+        businessId
+      }
+    })
+
+    if (!existingRecipe) {
+      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
+    }
+
+    const { isFavorite } = await request.json()
+
+    // Update only the isFavorite field
+    const updatedRecipe = await prisma.recipe.update({
+      where: { id: recipeId },
+      data: { isFavorite } as any,
+      include: {
+        category: true,
+        yieldUnit: true,
+        ingredients: {
+          include: {
+            ingredient: true,
+            unit: true
+          }
+        },
+        subRecipes: {
+          include: {
+            subRecipe: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(updatedRecipe)
+  } catch (error) {
+    console.error('Error updating recipe favorite status:', error)
+    return NextResponse.json(
+      { error: 'Failed to update recipe' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -43,6 +102,7 @@ export async function PUT(
       operationalCost,
       packagingCost,
       canBeUsedAsIngredient,
+      isFavorite,
       categoryId,
       ingredients,
       subRecipes
@@ -169,6 +229,7 @@ export async function PUT(
           totalCOGS,
           cogsPerServing,
           categoryId: categoryId || null,
+          ...(isFavorite !== undefined && { isFavorite }),
           ingredients: {
             create: recipeIngredients
           },

@@ -7,14 +7,15 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { TrashIcon, CheckIcon, UpdateIcon, HomeIcon, MixerVerticalIcon, GlobeIcon, PersonIcon, LockClosedIcon, ImageIcon, RulerHorizontalIcon, DashIcon, AvatarIcon } from '@radix-ui/react-icons'
+import { TrashIcon, CheckIcon, UpdateIcon, HomeIcon, MixerVerticalIcon, GlobeIcon, PersonIcon, LockClosedIcon, ImageIcon, RulerHorizontalIcon, DashIcon, AvatarIcon, ActivityLogIcon } from '@radix-ui/react-icons'
+import { SalesChannelIconSelector, SALES_CHANNEL_ICONS } from '@/components/ui/sales-channel-icon-selector'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { FormField } from '@/components/forms/FormField'
 import { FormActions } from '@/components/forms/FormActions'
 import { TextareaField } from '@/components/forms/TextareaField'
 import { Em, Heading, Strong, Text } from '@radix-ui/themes'
-import { ThemeToggleWithLabel } from '@/components/ui/theme-toggle'
+import { ConfirmationDialog } from '@/components/ui/alert-dialog'
 
 
 interface BusinessProfile {
@@ -24,7 +25,6 @@ interface BusinessProfile {
   email: string
   currency: string
   language: string
-  theme: string
   logo?: string
 }
 
@@ -46,6 +46,7 @@ interface SalesChannel {
   id: string
   name: string
   commission: number
+  icon: string
 }
 
 interface SkuSettings {
@@ -170,7 +171,6 @@ export default function SettingsPage() {
     email: '',
     currency: 'IDR',
     language: 'id',
-    theme: 'light',
     logo: ''
   })
   
@@ -201,7 +201,21 @@ export default function SettingsPage() {
   
   const [newChannel, setNewChannel] = useState({
     name: '',
-    commission: 0
+    commission: 0,
+    icon: 'other'
+  })
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
   })
 
   useEffect(() => {
@@ -222,7 +236,6 @@ export default function SettingsPage() {
         email: business.email || '',
         currency: business.currency || 'IDR',
         language: business.language || 'id',
-        theme: business.theme || 'light',
         logo: business.logo || ''
       })
     }
@@ -231,7 +244,7 @@ export default function SettingsPage() {
   // Reset helpers for inline add forms
   const resetNewCategory = () => setNewCategory({ name: '', type: 'ingredient', color: '#6B7280' })
   const resetNewUnit = () => setNewUnit({ name: '', symbol: '', type: 'purchase' })
-  const resetNewChannel = () => setNewChannel({ name: '', commission: 0 })
+  const resetNewChannel = () => setNewChannel({ name: '', commission: 0, icon: 'other' })
 
   const fetchData = async () => {
     try {
@@ -255,7 +268,6 @@ export default function SettingsPage() {
           email: businessData.email || '',
           currency: businessData.currency || 'IDR',
           language: businessData.language || 'id',
-          theme: businessData.theme || 'light',
           logo: businessData.logo || ''
         })
       }
@@ -308,7 +320,6 @@ export default function SettingsPage() {
       email: business.email || '',
       currency: business.currency || 'IDR',
       language: business.language || 'id',
-      theme: business.theme || 'light',
       logo: business.logo || ''
     })
   }
@@ -477,7 +488,7 @@ export default function SettingsPage() {
       if (response.ok) {
         const channel = await response.json()
         setSalesChannels(prev => [...prev, channel])
-        setNewChannel({ name: '', commission: 0 })
+        setNewChannel({ name: '', commission: 0, icon: 'other' })
         toast.success('Channel berhasil ditambahkan')
       } else {
         toast.error('Gagal menambahkan channel')
@@ -488,60 +499,79 @@ export default function SettingsPage() {
     }
   }
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus kategori ini?')) return
+  const handleDeleteCategory = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Kategori',
+      description: 'Apakah Anda yakin ingin menghapus kategori ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/categories/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/categories/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setCategories(categories.filter(cat => cat.id !== id))
-        toast.success('Kategori berhasil dihapus')
-      } else {
-        toast.error('Gagal menghapus kategori')
+          if (response.ok) {
+            setCategories(categories.filter(cat => cat.id !== id))
+            toast.success('Kategori berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus kategori')
+          }
+        } catch (error) {
+          console.error('Error deleting category:', error)
+          toast.error('Gagal menghapus kategori')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting category:', error)
-      toast.error('Gagal menghapus kategori')
-    }
+    })
   }
 
-  const handleDeleteUnit = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus satuan ini?')) return
+  const handleDeleteUnit = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Satuan',
+      description: 'Apakah Anda yakin ingin menghapus satuan ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/units/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/units/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setUnits(units.filter(unit => unit.id !== id))
-        toast.success('Satuan berhasil dihapus')
-      } else {
-        toast.error('Gagal menghapus satuan')
+          if (response.ok) {
+            setUnits(units.filter(unit => unit.id !== id))
+            toast.success('Satuan berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus satuan')
+          }
+        } catch (error) {
+          console.error('Error deleting unit:', error)
+          toast.error('Gagal menghapus satuan')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting unit:', error)
-      toast.error('Gagal menghapus satuan')
-    }
+    })
   }
 
-  const handleDeleteChannel = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus channel ini?')) return
+  const handleDeleteChannel = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Channel',
+      description: 'Apakah Anda yakin ingin menghapus channel ini? Semua harga channel terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/sales-channels/${id}`, {
+            method: 'DELETE'
+          })
 
-    try {
-      const response = await fetch(`/api/sales-channels/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setSalesChannels(prev => prev.filter(ch => ch.id !== id))
+          if (response.ok) {
+            setSalesChannels(prev => prev.filter(ch => ch.id !== id))
+            toast.success('Channel berhasil dihapus')
+          } else {
+            toast.error('Gagal menghapus channel')
+          }
+        } catch (error) {
+          console.error('Error deleting channel:', error)
+          toast.error('Gagal menghapus channel')
+        }
       }
-    } catch (error) {
-      console.error('Error deleting channel:', error)
-    }
+    })
   }
 
   if (loading) {
@@ -604,7 +634,7 @@ export default function SettingsPage() {
                     value="categories" 
                     className="px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-200 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none hover:text-blue-600/80 rounded-none whitespace-nowrap mobile-tab-trigger"
                   >
-                    <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <MixerVerticalIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span className="hidden sm:inline">Kategori</span>
                     <span className="sm:hidden">Kategori</span>
                   </TabsTrigger>
@@ -620,7 +650,7 @@ export default function SettingsPage() {
                     value="channels" 
                     className="px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-200 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none hover:text-blue-600/80 rounded-none whitespace-nowrap mobile-tab-trigger"
                   >
-                    <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <GlobeIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span className="hidden sm:inline">Saluran Penjualan</span>
                     <span className="sm:hidden">Channel</span>
                   </TabsTrigger>
@@ -633,12 +663,12 @@ export default function SettingsPage() {
                     <span className="sm:hidden">Akun</span>
                   </TabsTrigger>
                   <TabsTrigger 
-                    value="theme" 
+                    value="activity" 
                     className="px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-all duration-200 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none hover:text-blue-600/80 rounded-none whitespace-nowrap mobile-tab-trigger"
                   >
-                    <MixerVerticalIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Tema</span>
-                    <span className="sm:hidden">Tema</span>
+                    <ActivityLogIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Aktivitas</span>
+                    <span className="sm:hidden">Aktivitas</span>
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -1316,7 +1346,7 @@ export default function SettingsPage() {
                     </Text>
                   </div>
                   <form onSubmit={handleAddChannel} className="mb-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <FormField label="Nama channel" required>
                         <Input
                           placeholder="Nama channel"
@@ -1352,28 +1382,45 @@ export default function SettingsPage() {
                           step={0.1}
                         />
                       </FormField>
+                      <FormField label="Ikon Channel">
+                        <SalesChannelIconSelector
+                          value={newChannel.icon}
+                          onValueChange={(icon) => setNewChannel(prev => ({ ...prev, icon }))}
+                        />
+                      </FormField>
                       <div className="flex items-end">
                         <FormActions onCancel={resetNewChannel} loading={false} submitText="Tambah" />
                       </div>
                     </div>
                   </form>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                    {salesChannels.map(channel => (
-                      <div key={channel.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{channel.name}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">Komisi: {channel.commission}%</div>
+                    {salesChannels.map(channel => {
+                      const channelIcon = SALES_CHANNEL_ICONS.find(icon => icon.id === channel.icon) || SALES_CHANNEL_ICONS.find(icon => icon.id === 'other')
+                      return (
+                        <div key={channel.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div 
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
+                              style={{ backgroundColor: channelIcon?.color || '#6B7280' }}
+                            >
+                              {channelIcon?.icon || '🏢'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">{channel.name}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Komisi: {channel.commission}%</div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteChannel(channel.id)}
+                            className="text-red-600 hover:text-red-700 px-2 py-1 sm:px-3 sm:py-1.5 flex-shrink-0"
+                          >
+                            <TrashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteChannel(channel.id)}
-                          className="text-red-600 hover:text-red-700 px-2 py-1 sm:px-3 sm:py-1.5 flex-shrink-0"
-                        >
-                          <TrashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </TabsContent>
@@ -1486,74 +1533,32 @@ export default function SettingsPage() {
                 </div>
               </TabsContent>
 
-              {/* Theme Tab */}
-              <TabsContent value="theme" className="space-y-4">
+              {/* Activity Tab */}
+              <TabsContent value="activity" className="space-y-4">
                 <div className="px-5 py-5">
                   <div className="space-y-2 mb-5">
                     <Text>
                       <Heading mb="2" size="3" className="flex items-center gap-2">
-                        <MixerVerticalIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                        Pengaturan Tema
+                        <ActivityLogIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Log Aktivitas
                       </Heading>
-                      Sesuaikan tampilan aplikasi sesuai preferensi Anda
+                      Riwayat lengkap aktivitas sistem dan pengguna
                     </Text>
                   </div>
                   
-                  <div className="space-y-6">
-                    {/* Theme Toggle */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            Mode Tema
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            Pilih antara mode terang dan gelap untuk tampilan aplikasi
-                          </p>
-                        </div>
-                        <ThemeToggleWithLabel />
-                      </div>
-                    </div>
-
-                    {/* Theme Preview */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                        Preview Tema
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Mode Terang</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Tampilan cerah dengan latar belakang putih dan teks gelap
-                          </p>
-                        </div>
-                        <div className="p-4 rounded-lg border-2 border-gray-200 bg-gray-800 dark:bg-gray-700 dark:border-gray-600">
-                          <h4 className="font-medium text-gray-100 mb-2">Mode Gelap</h4>
-                          <p className="text-sm text-gray-300">
-                            Tampilan gelap dengan latar belakang hitam dan teks terang
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Theme Information */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className="text-white text-sm">💡</span>
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                            Tips Penggunaan
-                          </h4>
-                          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                            <li>• Tema akan otomatis tersimpan di browser Anda</li>
-                            <li>• Aplikasi akan mengingat preferensi tema Anda</li>
-                            <li>• Tema dapat diubah kapan saja dari menu ini atau tombol toggle di header</li>
-                            <li>• Perubahan tema berlaku untuk seluruh aplikasi</li>
-                          </ul>
-                        </div>
-                      </div>
+                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                    <div className="text-center py-8">
+                      <ActivityLogIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Log Aktivitas Lengkap</h3>
+                      <p className="text-gray-500 mb-4">
+                        Lihat riwayat lengkap aktivitas sistem dengan fitur pencarian dan filter
+                      </p>
+                      <Button
+                        onClick={() => window.location.href = '/settings/activity-log'}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Buka Log Aktivitas
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1562,6 +1567,15 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+      />
     </DashboardLayout>
   )
 }

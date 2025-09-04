@@ -63,7 +63,7 @@ export default function SubscriptionPage() {
       } else {
         setError('Failed to fetch subscription')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch subscription')
     } finally {
       setLoading(false)

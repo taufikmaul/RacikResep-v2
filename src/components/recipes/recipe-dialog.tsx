@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { X, Plus, Trash2, Loader2, Calculator } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { Info } from 'lucide-react'
+import { X, Plus, Trash2, Loader2, Calculator, ChefHat } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Category {
@@ -63,6 +66,7 @@ interface Recipe {
   operationalCost: number
   packagingCost: number
   canBeUsedAsIngredient: boolean
+  isFavorite?: boolean
   categoryId?: string
   ingredients: Array<{
     ingredientId: string
@@ -96,6 +100,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
     operationalCost: '0',
     packagingCost: '0',
     canBeUsedAsIngredient: false,
+    isFavorite: false,
     categoryId: ''
   })
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([])
@@ -133,6 +138,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
           operationalCost: recipe.operationalCost.toString(),
           packagingCost: recipe.packagingCost.toString(),
           canBeUsedAsIngredient: recipe.canBeUsedAsIngredient || false,
+          isFavorite: recipe.isFavorite || false,
           categoryId: recipe.categoryId || ''
         })
         setRecipeIngredients(recipe.ingredients.map(ing => ({
@@ -154,6 +160,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
           operationalCost: '0',
           packagingCost: '0',
           canBeUsedAsIngredient: false,
+          isFavorite: false,
           categoryId: ''
         })
         setRecipeIngredients([])
@@ -442,37 +449,64 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
       isOpen={isOpen} 
       onClose={onClose} 
       title={recipe ? 'Edit Resep' : 'Tambah Resep'} 
-      size="2xl"
+      size="xl"
       footer={
-        <>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onClose}
-            className="flex-1 h-10"
+        <div className="space-y-4">
+          {/* COGS Summary - Above Action Buttons */}
+          <div 
+            className="rounded-lg p-4 border border-blue-200 bg-blue-50"
           >
-            Batal
-          </Button>
-          <Button 
-            type="button" 
-            onClick={() => formRef.current?.requestSubmit()}
-            disabled={loading}
-            variant="accent"
-            className="flex-1 h-10"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              recipe ? 'Perbarui' : 'Simpan'
-            )}
-          </Button>
-        </>
+            <div className="flex items-center gap-2 mb-3">
+              <Calculator className="h-5 w-5 text-blue-700" />
+              <h3 className="text-lg font-medium text-blue-900">Ringkasan COGS</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-blue-700">Total COGS</p>
+                <p className="text-xl font-semibold text-blue-900">
+                  Rp {totalCOGS.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-blue-700">COGS per {units.find(u => u.id === formData.yieldUnitId)?.symbol || 'unit'}</p>
+                <p className="text-xl font-semibold text-blue-900">
+                  Rp {cogsPerServing.toLocaleString('id-ID')}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              className="flex-1 h-10"
+            >
+              Batal
+            </Button>
+            <Button 
+              type="button" 
+              onClick={() => formRef.current?.requestSubmit()}
+              disabled={loading}
+              variant="accent"
+              className="flex-1 h-10"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menyimpan...
+                </>
+              ) : (
+                recipe ? 'Perbarui' : 'Simpan'
+              )}
+            </Button>
+          </div>
+        </div>
       }
     >
-      <div className="p-6 bg-gradient-to-br from-purple-50 via-white to-pink-50">
+      <div className="p-6 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="px-4 py-3 rounded-lg text-sm border-2 border-red-200 bg-red-50 text-red-700 font-medium">
@@ -480,21 +514,70 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
             </div>
           )}
 
-          {/* Basic Information Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-purple-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm font-bold">📝</span>
+          {/* Header with Recipe Name and Favorite */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                  <ChefHat className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  {recipe ? 'Edit Resep' : 'Resep Baru'}
+                </h3>
               </div>
-              <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Informasi Dasar Resep
-              </h3>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="canBeUsedAsIngredient"
+                    checked={formData.canBeUsedAsIngredient}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, canBeUsedAsIngredient: checked }))}
+                  />
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="canBeUsedAsIngredient" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                      Basic Recipe
+                    </label>
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <button type="button" className="text-gray-400 hover:text-gray-600 transition-colors">
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-80">
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold text-gray-900">Basic Recipe</h4>
+                          <p className="text-sm text-gray-600">
+                            Resep ini dapat digunakan sebagai bahan dalam resep lain. 
+                            Ini berguna untuk resep dasar seperti saus, bumbu, atau komponen 
+                            yang sering digunakan dalam berbagai hidangan.
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Contoh: Saus tomat, bumbu dasar, atau kaldu dapat dijadikan Basic Recipe 
+                            untuk digunakan dalam resep yang lebih kompleks.
+                          </p>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="isFavorite"
+                    checked={formData.isFavorite}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isFavorite: checked }))}
+                  />
+                  <label htmlFor="isFavorite" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    ⭐ Favorit
+                  </label>
+                </div>
+              </div>
             </div>
+
+           
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-semibold mb-2 text-gray-700">
-                  Nama Resep
+                  Nama Resep *
                 </label>
                 <Input
                   id="name"
@@ -503,264 +586,121 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                   onChange={handleChange}
                   required
                   placeholder="Contoh: Nasi Goreng Spesial"
-                  className="h-11 border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 rounded-lg"
+                  className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg text-lg"
                 />
               </div>
 
               <div>
                 <label htmlFor="sku" className="block text-sm font-semibold mb-2 text-gray-700">
-                  SKU (opsional)
+                  SKU
                 </label>
                 <Input
                   id="sku"
                   name="sku"
                   value={formData.sku}
                   onChange={handleChange}
-                  placeholder="Contoh: RCP-001"
-                  className="h-11 border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 rounded-lg font-mono"
+                  placeholder="RCP-001"
+                  className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg font-mono"
                 />
-                <p className="text-xs mt-2 text-gray-500 bg-purple-50 p-2 rounded-md border border-purple-200">
-                  💡 Kode unik untuk identifikasi resep. Kosongkan untuk generate otomatis.
-                </p>
               </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="categoryId" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Kategori
-              </label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-              >
-                <SelectTrigger 
-                  className="h-10"
+              <div>
+                <label htmlFor="categoryId" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Kategori
+                </label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
                 >
-                  <SelectValue placeholder="Pilih Kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem 
-                      key={category.id} 
-                      value={category.id}
-                      className="hover:bg-gray-3"
-                    >
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                  <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg">
+                    <SelectValue placeholder="Pilih Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Image Upload */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Gambar Resep (opsional)
-              </label>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-md overflow-hidden flex items-center justify-center border" style={{ borderColor: 'var(--gray-7)', background: 'var(--gray-2)' }}>
-                  {formData.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-xs" style={{ color: 'var(--gray-11)' }}>Tidak ada gambar</div>
-                  )}
-                </div>
-                <div>
-                  <Input type="file" accept="image/*" onChange={handleImageChange} className="h-10" />
-                  <div className="text-xs mt-1" style={{ color: 'var(--gray-11)' }}>
-                    {imageUploading ? 'Mengunggah...' : 'PNG/JPG/WEBP'}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700">
+                  Gambar Resep
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden flex items-center justify-center border-2 border-gray-200 bg-gray-50">
+                    {formData.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-xs text-gray-500">📷</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageChange} 
+                      className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg" 
+                    />
+                    <div className="text-xs mt-1 text-gray-500">
+                      {imageUploading ? 'Mengunggah...' : 'PNG/JPG/WEBP (opsional)'}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <div>
+                <label htmlFor="description" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Deskripsi
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none"
+                  rows={3}
+                  placeholder="Deskripsi singkat resep..."
+                />
+              </div>
+
+              <div>
+                <label htmlFor="instructions" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Instruksi Memasak
+                </label>
+                <textarea
+                  id="instructions"
+                  name="instructions"
+                  value={formData.instructions}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none"
+                  rows={3}
+                  placeholder="Langkah-langkah memasak..."
+                />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-              Deskripsi
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2"
-              style={{
-                background: 'var(--gray-1)',
-                border: '1px solid var(--gray-7)',
-                color: 'var(--gray-12)'
-              }}
-              rows={2}
-              placeholder="Deskripsi resep"
-            />
-          </div>
 
-          <div>
-            <label htmlFor="instructions" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-              Instruksi Memasak
-            </label>
-            <textarea
-              id="instructions"
-              name="instructions"
-              value={formData.instructions}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md text-sm focus:outline-none focus:ring-2"
-              style={{
-                background: 'var(--gray-1)',
-                border: '1px solid var(--gray-7)',
-                color: 'var(--gray-12)'
-              }}
-              rows={4}
-              placeholder="Langkah-langkah memasak..."
-            />
-          </div>
-
-            {/* Yield and Costs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label htmlFor="yield" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Jumlah Hasil *
-              </label>
-              <Input
-                id="yield"
-                name="yield"
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={formData.yield}
-                onChange={handleChange}
-                required
-                className="h-10"
-                style={{ 
-                  background: 'var(--gray-1)', 
-                  border: '1px solid var(--gray-7)', 
-                  color: 'var(--gray-12)'
-                }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="yieldUnitId" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Satuan Hasil *
-              </label>
-              <Select
-                value={formData.yieldUnitId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, yieldUnitId: value }))}
-              >
-                <SelectTrigger 
-                  className="h-10"
-                >
-                  <SelectValue placeholder="Pilih Satuan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((unit) => (
-                    <SelectItem 
-                      key={unit.id} 
-                      value={unit.id}
-                      className="hover:bg-gray-3"
-                    >
-                      {unit.name} ({unit.symbol})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            <div>
-              <label htmlFor="laborCost" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Biaya Tenaga Kerja
-              </label>
-              <Input
-                id="laborCost"
-                name="laborCost"
-                type="number"
-                step="0.01"
-                value={formData.laborCost}
-                onChange={handleChange}
-                placeholder="0"
-                className="h-10"
-                style={{ 
-                  background: 'var(--gray-1)', 
-                  border: '1px solid var(--gray-7)', 
-                  color: 'var(--gray-12)'
-                }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="operationalCost" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Biaya Operasional
-              </label>
-              <Input
-                id="operationalCost"
-                name="operationalCost"
-                type="number"
-                step="0.01"
-                value={formData.operationalCost}
-                onChange={handleChange}
-                placeholder="0"
-                className="h-10"
-                style={{ 
-                  background: 'var(--gray-1)', 
-                  border: '1px solid var(--gray-7)', 
-                  color: 'var(--gray-12)'
-                }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="packagingCost" className="block text-sm font-medium mb-2" style={{ color: 'var(--gray-12)' }}>
-                Biaya Kemasan
-              </label>
-              <Input
-                id="packagingCost"
-                name="packagingCost"
-                type="number"
-                step="0.01"
-                value={formData.packagingCost}
-                onChange={handleChange}
-                placeholder="0"
-                className="h-10"
-                style={{ 
-                  background: 'var(--gray-1)', 
-                  border: '1px solid var(--gray-7)', 
-                  color: 'var(--gray-12)'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Recipe Usage Flag */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="canBeUsedAsIngredient"
-              checked={formData.canBeUsedAsIngredient}
-              onChange={(e) => setFormData(prev => ({ ...prev, canBeUsedAsIngredient: e.target.checked }))}
-              className="w-4 h-4 rounded"
-            />
-            <label htmlFor="canBeUsedAsIngredient" className="text-sm font-medium" style={{ color: 'var(--gray-12)' }}>
-              Resep ini dapat digunakan sebagai bahan dalam resep lain
-            </label>
-          </div>
-
-            {/* Ingredients */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Bahan-bahan</h3>
+          {/* Ingredients Section */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">🥘</span>
+                </div>
+                <h3 className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                  Bahan-bahan
+                </h3>
+              </div>
               <Button 
                 type="button" 
                 onClick={addIngredient} 
                 size="sm"
-                variant="accent"
+                className="bg-orange-500 hover:bg-orange-600 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Bahan
@@ -771,7 +711,7 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
               {recipeIngredients.map((recipeIng, index) => (
                 <div 
                   key={index} 
-                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50"
+                  className="flex items-center gap-3 p-4 rounded-lg border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
                 >
                   <Select
                     value={recipeIng.ingredientId}
@@ -943,32 +883,109 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Yield and Costs Section */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                <Calculator className="h-4 w-4 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                Yield & Biaya
+              </h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label htmlFor="yield" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Jumlah Hasil *
+                </label>
+                <Input
+                  id="yield"
+                  name="yield"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.yield}
+                  onChange={handleChange}
+                  required
+                  className="h-12 border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="yieldUnitId" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Satuan Hasil *
+                </label>
+                <Select
+                  value={formData.yieldUnitId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, yieldUnitId: value }))}
+                >
+                  <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 rounded-lg">
+                    <SelectValue placeholder="Pilih Satuan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name} ({unit.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* COGS Summary */}
-          <div 
-            className="rounded-lg p-4 border border-blue-200 bg-blue-50"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Calculator className="h-5 w-5 text-blue-700" />
-              <h3 className="text-lg font-medium text-blue-900">Ringkasan COGS</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-blue-700">Total COGS</p>
-                <p className="text-xl font-semibold text-blue-900">
-                  Rp {totalCOGS.toLocaleString('id-ID')}
-                </p>
+                <label htmlFor="laborCost" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Biaya Tenaga Kerja
+                </label>
+                <Input
+                  id="laborCost"
+                  name="laborCost"
+                  type="number"
+                  step="0.01"
+                  value={formData.laborCost}
+                  onChange={handleChange}
+                  placeholder="0"
+                  className="h-12 border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 rounded-lg"
+                />
               </div>
+
               <div>
-                <p className="text-sm text-blue-700">COGS per {units.find(u => u.id === formData.yieldUnitId)?.symbol || 'unit'}</p>
-                <p className="text-xl font-semibold text-blue-900">
-                  Rp {cogsPerServing.toLocaleString('id-ID')}
-                </p>
+                <label htmlFor="operationalCost" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Biaya Operasional
+                </label>
+                <Input
+                  id="operationalCost"
+                  name="operationalCost"
+                  type="number"
+                  step="0.01"
+                  value={formData.operationalCost}
+                  onChange={handleChange}
+                  placeholder="0"
+                  className="h-12 border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="packagingCost" className="block text-sm font-semibold mb-2 text-gray-700">
+                  Biaya Kemasan
+                </label>
+                <Input
+                  id="packagingCost"
+                  name="packagingCost"
+                  type="number"
+                  step="0.01"
+                  value={formData.packagingCost}
+                  onChange={handleChange}
+                  placeholder="0"
+                  className="h-12 border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 rounded-lg"
+                />
               </div>
             </div>
           </div>
-
 
           </form>
         </div>

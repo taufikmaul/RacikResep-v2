@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 export interface Column<T> {
@@ -45,6 +52,8 @@ interface DataTableProps<T> {
   // Selection support
   selectedItems?: string[]
   onSelectionChange?: (selectedIds: string[]) => void
+  // Filter controls support
+  filterControls?: React.ReactNode
 }
 
 export function DataTable<T extends { id: string }>({
@@ -64,10 +73,11 @@ export function DataTable<T extends { id: string }>({
   renderItemCard,
   bulkActions,
   selectedItems = [],
-  onSelectionChange
+  onSelectionChange,
+  filterControls
 }: DataTableProps<T>) {
   // Debounced search handling for better UX and to avoid excessive fetches
-  const [internalSearch, setInternalSearch] = useState(searchTerm)
+  const [internalSearch, setInternalSearch] = useState(searchTerm || '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Keep internal state in sync when parent searchTerm changes externally
@@ -135,42 +145,56 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <Card>
+      {/* Search and Filters - Sticky */}
+      <Card className="sticky top-2 sm:top-12 z-30 shadow-lg border-2 backdrop-blur-sm"  
+      style={{ 
+        background: "var(--color-panel-solid)/98", border: "1px solid var(--gray-6)"
+      }}>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:justify-between">
-            <div className="relative w-full sm:flex-1 sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={internalSearch}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+          <div className="space-y-4">
+            {/* Search Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:justify-between">
+              <div className="relative w-full sm:flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={internalSearch || ''}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (debounceRef.current) clearTimeout(debounceRef.current)
+                      onSearchChange((internalSearch || '').trim())
+                    }
+                  }}
+                  onBlur={() => {
                     if (debounceRef.current) clearTimeout(debounceRef.current)
-                    onSearchChange(internalSearch.trim())
-                  }
-                }}
-                onBlur={() => {
-                  if (debounceRef.current) clearTimeout(debounceRef.current)
-                  onSearchChange(internalSearch.trim())
-                }}
-                className="pl-10"
-              />
+                    onSearchChange((internalSearch || '').trim())
+                  }}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Tampilkan:</span>
+                <Select value={pagination.limit.toString()} onValueChange={(value) => onLimitChange(parseInt(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Tampilkan:</span>
-              <select
-                value={pagination.limit}
-                onChange={(e) => onLimitChange(parseInt(e.target.value))}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
+            
+            {/* Filter Controls Row */}
+            {filterControls && (
+              <div className="border-t border-gray-200 pt-4">
+                {filterControls}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -243,7 +267,11 @@ export function DataTable<T extends { id: string }>({
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200" 
+                  style={{ 
+                    background: "var(--color-panel-solid)"
+                  }} 
+                >
                   {data.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       {onSelectionChange && (

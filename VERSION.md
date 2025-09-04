@@ -1,49 +1,70 @@
-# 🚀 RacikResep Version 1.0.0
+# 🚀 RacikResep Version 1.1.0
 
 ## 📅 Release Date
 **January 29, 2025**
 
 ## 🎯 Version Overview
-RacikResep v1.0.0 represents the **initial production release** of our comprehensive recipe management and cost analysis system. This version includes all core features needed for food businesses to manage recipes, ingredients, and pricing strategies.
+RacikResep v1.1.0 introduces the **Advanced Price Manager System** and enhanced recipe management features. This version builds upon the solid foundation of v1.0.0 with powerful pricing tools and improved user experience for food businesses.
 
-## ✨ What's New in 1.0.0
+## ✨ What's New in 1.1.0
 
-### 🥘 **Complete Recipe Management System**
+### 💰 **Advanced Price Manager System** 🆕
+- ✅ Comprehensive recipe price management interface
+- ✅ Channel-specific pricing with bulk operations
+- ✅ Price history tracking and visualization
+- ✅ Profit margin analysis and optimization
+- ✅ Bulk price updates across multiple recipes
+- ✅ Sales channel price management
+
+### 🥘 **Enhanced Recipe Management** 🆕
+- ✅ "Basic Recipe" concept for reusable recipe components
+- ✅ Improved recipe categorization with type filtering
+- ✅ Enhanced recipe dialog with COGS summary in footer
+- ✅ Better visual indicators for recipe status
+- ✅ Hover information for recipe features
+
+### 🎨 **Improved User Experience** 🆕
+- ✅ Better category filtering in recipe lists
+- ✅ Enhanced visual feedback with colored icons
+- ✅ Improved dialog layouts and information hierarchy
+- ✅ Better mobile responsiveness for price management
+
+### 🥘 **Complete Recipe Management System** (from 1.0.0)
 - ✅ Recipe creation, editing, and deletion
 - ✅ Ingredient composition management
 - ✅ Recipe categorization and tagging
 - ✅ Recipe search and filtering
 - ✅ Recipe export functionality
 
-### 🥬 **Comprehensive Ingredient Management**
+### 🥬 **Comprehensive Ingredient Management** (from 1.0.0)
 - ✅ Ingredient database with pricing
 - ✅ SKU system for inventory tracking
 - ✅ Price history tracking
 - ✅ Unit conversion handling
 - ✅ Bulk operations (import/export, category changes, deletions)
 
-### 💰 **Advanced Cost Analysis Tools**
+### 💰 **Advanced Cost Analysis Tools** (from 1.0.0)
 - ✅ Automatic COGS calculation
 - ✅ Profit margin analysis
 - ✅ Selling price simulation
 - ✅ Shopping calculator
 - ✅ Customizable decimal formatting
 
-### 🏪 **Business Management Features**
+### 🏪 **Business Management Features** (from 1.0.0)
 - ✅ Business profile management
 - ✅ Sales channel tracking
 - ✅ Category management
 - ✅ Unit management
 - ✅ Activity logging
 
-### 🎨 **Modern User Interface**
+### 🎨 **Modern User Interface** (from 1.0.0)
 - ✅ Dark/Light theme system
 - ✅ Responsive mobile-first design
 - ✅ Radix UI components
 - ✅ Toast notifications
 - ✅ Real-time updates
 
-### 🔐 **Security & Authentication**
+### 🔐 **Security & Authentication** (from 1.0.0)
 - ✅ NextAuth.js integration
 - ✅ Multi-tenant architecture
 - ✅ Data validation
@@ -72,6 +93,13 @@ RacikResep v1.0.0 represents the **initial production release** of our comprehen
 
 ## 🔄 Migration from Previous Versions
 
+### **From 1.0.0 to 1.1.0**
+- ✅ **Automatic Migration**: Database schema updates handled automatically
+- ✅ **Data Preservation**: All existing data is preserved
+- ✅ **New Features**: Price Manager and enhanced recipe management
+- ✅ **Performance**: Improved performance and user experience
+- ✅ **Backward Compatibility**: All 1.0.0 features remain fully functional
+
 ### **From 0.1.0 (Development Version)**
 - ✅ **Automatic Migration**: Database schema updates handled automatically
 - ✅ **Data Preservation**: All existing data is preserved
@@ -79,7 +107,7 @@ RacikResep v1.0.0 represents the **initial production release** of our comprehen
 - ✅ **Performance**: Significant performance improvements
 
 ### **Breaking Changes**
-- None - This is a feature-complete release
+- None - This is a backward-compatible release
 
 ## 🚀 Deployment
 
@@ -102,22 +130,23 @@ RacikResep v1.0.0 represents the **initial production release** of our comprehen
 | Recipe Management | 100% | ✅ Complete |
 | Ingredient Management | 100% | ✅ Complete |
 | Cost Analysis | 100% | ✅ Complete |
+| Price Management | 100% | ✅ Complete 🆕 |
 | Business Management | 100% | ✅ Complete |
 | User Interface | 100% | ✅ Complete |
 | Security | 100% | ✅ Complete |
 | Documentation | 100% | ✅ Complete |
 | Testing | 95% | 🔄 In Progress |
-| Performance | 90% | 🔄 Optimizing |
+| Performance | 95% | 🔄 Optimizing |
 
 ## 🔮 Future Roadmap
 
-### **Version 1.1.0 (Q2 2025)**
+### **Version 1.2.0 (Q2 2025)**
 - Advanced analytics and reporting
 - Multi-language support
 - API rate limiting
 - Advanced user permissions
 
-### **Version 1.2.0 (Q3 2025)**
+### **Version 1.3.0 (Q3 2025)**
 - Integration with external services
 - Mobile app development
 - Advanced pricing strategies
@@ -145,7 +174,7 @@ RacikResep v1.0.0 represents the **initial production release** of our comprehen
 
 ## 🎉 Release Celebration
 
-This release represents **months of development** and **hundreds of commits** from our development team. We're excited to share this powerful tool with the culinary community!
+This release builds upon the success of v1.0.0 with powerful new pricing tools and enhanced user experience. The Price Manager system represents a significant step forward in recipe cost management capabilities!
 
 ### **Special Thanks**
 - **Development Team**: For building this amazing system
@@ -155,9 +184,9 @@ This release represents **months of development** and **hundreds of commits** fr
 
 ---
 
-**🎊 RacikResep v1.0.0 is here! 🎊**
+**🎊 RacikResep v1.1.0 is here! 🎊**
 
-*Ready to revolutionize your recipe management and cost analysis!*
+*Now with Advanced Price Manager - Take control of your recipe pricing!*
 
 ---
 

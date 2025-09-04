@@ -1,9 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Link from 'next/link'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Loader2, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -72,8 +72,8 @@ export function IngredientImportDialog({ isOpen, onClose, onImported }: Ingredie
       toast.success(`Import selesai: ${data.created} dibuat, ${data.updated} diperbarui, ${data.failed} gagal`)
       onImported?.({ created: data.created, updated: data.updated, failed: data.failed })
       onClose()
-    } catch (err: any) {
-      toast.error(err?.message || 'Gagal mengimpor CSV')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mengimpor CSV')
     } finally {
       setLoading(false)
     }
@@ -100,7 +100,7 @@ export function IngredientImportDialog({ isOpen, onClose, onImported }: Ingredie
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div>
             <p className="text-sm mb-2" style={{ color: 'var(--gray-12)' }}>
-            Unduh contoh <a href="/api/ingredients/template" className="text-sm" style={{ color: 'var(--accent-11)' }}>template CSV</a> untuk melihat format yang diperlukan.
+            Unduh contoh <Link href="/api/ingredients/template" className="text-sm" style={{ color: 'var(--accent-11)' }}>template CSV</Link> untuk melihat format yang diperlukan.
             </p>
           </div>
           <div>

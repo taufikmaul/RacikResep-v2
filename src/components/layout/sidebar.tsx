@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -42,17 +43,17 @@ export function AppSidebar() {
             logo: data?.logo
           })
         }
-      } catch (_) {
+      } catch {
         // Silent fail
       }
     }
     loadBiz()
   }, [])
 
-  // Auto-expand simulation menu if user is on a simulation page
+  // Auto-expand price manager menu if user is on a price manager page
   useEffect(() => {
-    if (pathname.startsWith('/simulation')) {
-      setExpandedMenus(prev => prev.includes('simulation') ? prev : [...prev, 'simulation'])
+    if (pathname.startsWith('/price/price-manager') || pathname.startsWith('/price/channel-price-manager')) {
+      setExpandedMenus(prev => prev.includes('price-manager') ? prev : [...prev, 'price-manager'])
     }
   }, [pathname])
 
@@ -61,12 +62,12 @@ export function AppSidebar() {
     { href: '/ingredients', label: 'Bahan Baku', icon: '🥬' },
     { href: '/recipes', label: 'Resep', icon: '📝' },
     {
-      key: 'simulation',
-      label: 'Simulasi',
-      icon: '🧮',
+      key: 'price-manager',
+      label: 'Price Manager',
+      icon: '💰',
       submenu: [
-        { href: '/simulation/harga-jual', label: 'Simulasi Harga Jual' },
-        { href: '/simulation/kalkulator-belanja', label: 'Kalkulator Belanja' }
+        { href: '/price/price-manager', label: 'Base Price Manager' },
+        { href: '/price/channel-price-manager', label: 'Channel Price Manager' }
       ]
     },
     { href: '/subscription', label: 'Subscription', icon: '👑' },
@@ -96,9 +97,11 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 p-4 border-b border-border">
           <div className="flex-shrink-0">
             {bizInfo?.logo ? (
-              <img
+              <Image
                 src={bizInfo.logo}
                 alt="Business Logo"
+                width={40}
+                height={40}
                 className="h-10 w-10 rounded-lg object-cover"
               />
             ) : (
