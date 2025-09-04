@@ -451,16 +451,16 @@ export function RecipeDialog({ isOpen, onClose, onSave, recipe }: RecipeDialogPr
       title={recipe ? 'Edit Resep' : 'Tambah Resep'} 
       size="xl"
       footer={
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           {/* COGS Summary - Above Action Buttons */}
           <div 
-            className="rounded-lg p-4 border border-blue-200 bg-blue-50"
+            className="rounded-lg flex flex-row justify-between gap-2 p-4 border border-blue-200 bg-blue-50"
           >
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2">
               <Calculator className="h-5 w-5 text-blue-700" />
               <h3 className="text-lg font-medium text-blue-900">Ringkasan COGS</h3>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-blue-700">Total COGS</p>
                 <p className="text-xl font-semibold text-blue-900">
