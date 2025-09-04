@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        commission: true
+        commission: true,
+        icon: true
       },
       orderBy: { name: 'asc' }
     })
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     const businessId = user.business.id
     const userId = session.user.id
 
-    const { name, commission } = await request.json()
+    const { name, commission, icon } = await request.json()
 
     if (!name || commission === undefined) {
       return NextResponse.json(
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         commission,
+        icon: icon || 'other',
         businessId
       }
     })

@@ -27,6 +27,7 @@ import {
 import toast from 'react-hot-toast'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
+import { SALES_CHANNEL_ICONS } from '@/components/ui/sales-channel-icon-selector'
 
 interface ChannelPrice {
   channelId: string
@@ -68,6 +69,12 @@ export function ChannelPriceDialog({
   const [targetProfitAmount, setTargetProfitAmount] = useState(5000)
   const [roundingOption, setRoundingOption] = useState<'none' | 'hundred' | 'thousand' | 'custom'>('hundred')
   const [customRounding, setCustomRounding] = useState(100)
+
+  // Helper function to get sales channel icon
+  const getSalesChannelIcon = (channelId: string) => {
+    const iconData = SALES_CHANNEL_ICONS.find(icon => icon.id === channelId)
+    return iconData || SALES_CHANNEL_ICONS.find(icon => icon.id === 'other')
+  }
 
   useEffect(() => {
     if (isOpen && recipe) {
@@ -397,9 +404,17 @@ export function ChannelPriceDialog({
                       {/* Channel Header */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <DollarSign className="h-5 w-5 text-blue-600" />
-                          </div>
+                          {(() => {
+                            const iconData = getSalesChannelIcon(channelPrice.channelId)
+                            return (
+                              <div 
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                                style={{ backgroundColor: iconData?.color || '#6B7280' }}
+                              >
+                                <span className="text-lg">{iconData?.icon || '🏢'}</span>
+                              </div>
+                            )
+                          })()}
                           <div>
                             <h4 className="font-semibold text-gray-900">{channelPrice.channelName}</h4>
                             <p className="text-sm text-gray-500">Default Commission: {channelPrice.channelCommission}%</p>

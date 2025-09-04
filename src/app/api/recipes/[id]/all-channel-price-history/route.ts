@@ -30,7 +30,8 @@ export async function GET(
       where: { businessId },
       select: {
         id: true,
-        name: true
+        name: true,
+        icon: true
       },
       orderBy: { name: 'asc' }
     })

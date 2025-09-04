@@ -51,7 +51,7 @@ The Recipe Price Manager is a new feature that transforms the existing pricing s
 ### Accessing Price Manager
 1. **Sidebar Navigation**: Click "Price Manager" in the main sidebar
 2. **Recipes Page**: Click "Price Manager" button next to "Tambah Resep"
-3. **Direct URL**: Navigate to `/recipes/price-manager`
+3. **Direct URL**: Navigate to `/price/price-manager`
 
 ### Updating Recipe Prices
 1. Click "Update Price" button for any recipe

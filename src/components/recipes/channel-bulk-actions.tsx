@@ -23,6 +23,7 @@ import {
   Calculator as CalculatorIcon
 } from 'lucide-react'
 import { ChannelBulkPriceDialog } from './channel-bulk-price-dialog'
+import { ConfirmationDialog } from '@/components/ui/alert-dialog'
 
 interface ChannelBulkActionsProps<T> {
   data: T[]
@@ -46,6 +47,17 @@ export function ChannelBulkActions<T extends { id: string }>({
   
   const [isProcessing, setIsProcessing] = useState(false)
   const [showBulkPriceDialog, setShowBulkPriceDialog] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  })
 
   const handleSelectAll = () => {
     if (selectedItems.length === data.length) {
@@ -55,15 +67,20 @@ export function ChannelBulkActions<T extends { id: string }>({
     }
   }
 
-  const handleBulkDelete = async () => {
-    if (confirm(`Apakah Anda yakin ingin menghapus ${selectedItems.length} item yang dipilih?`)) {
-      setIsProcessing(true)
-      try {
-        await onBulkDelete(selectedItems)
-      } finally {
-        setIsProcessing(false)
+  const handleBulkDelete = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Hapus Item Terpilih',
+      description: `Apakah Anda yakin ingin menghapus ${selectedItems.length} item yang dipilih? Tindakan ini tidak dapat dibatalkan.`,
+      onConfirm: async () => {
+        setIsProcessing(true)
+        try {
+          await onBulkDelete(selectedItems)
+        } finally {
+          setIsProcessing(false)
+        }
       }
-    }
+    })
   }
 
   const handleBulkExport = async () => {
@@ -182,6 +199,18 @@ export function ChannelBulkActions<T extends { id: string }>({
           onPriceUpdate={handleBulkPriceUpdate}
         />
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        variant="destructive"
+      />
     </>
   )
 }

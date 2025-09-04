@@ -46,7 +46,7 @@ export default function PriceManagerPage() {
               <p className="text-gray-600 mb-4">
                 Atur harga jual dasar, hitung margin keuntungan, dan kelola riwayat perubahan harga untuk setiap resep.
               </p>
-              <Link href="/recipes/price-manager">
+              <Link href="/price/price-manager">
                 <Button className="w-full">
                   Buka Base Price Manager
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -74,7 +74,7 @@ export default function PriceManagerPage() {
               <p className="text-gray-600 mb-4">
                 Atur harga khusus untuk setiap channel penjualan, hitung komisi, pajak, dan margin keuntungan.
               </p>
-              <Link href="/recipes/channel-price-manager">
+              <Link href="/price/channel-price-manager">
                 <Button className="w-full">
                   Buka Channel Price Manager
                   <ArrowRight className="h-4 w-4 ml-2" />

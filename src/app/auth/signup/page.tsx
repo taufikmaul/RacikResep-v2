@@ -61,7 +61,7 @@ export default function SignUp() {
       } else {
         setError(data.error || 'Terjadi kesalahan')
       }
-    } catch (error) {
+    } catch {
       setError('Terjadi kesalahan. Silakan coba lagi.')
     } finally {
       setIsLoading(false)

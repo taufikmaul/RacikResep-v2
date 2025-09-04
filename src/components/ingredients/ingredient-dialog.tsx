@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { DialogFooter } from '@/components/ui/dialog-footer'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Trash2, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import toast from 'react-hot-toast'
 
 interface Category {
@@ -562,7 +562,7 @@ export function IngredientDialog({ ingredient, isOpen, onClose, onSave }: Ingred
                     {usageRecipes.map(r => (
                       <div key={r.id} className="flex items-center gap-3 p-2 bg-orange-50 rounded-lg border border-orange-100 hover:bg-orange-100 transition-colors duration-200">
                         {r.imageUrl ? (
-                          <img src={r.imageUrl} alt={r.name} className="w-8 h-8 rounded-lg object-cover border border-orange-200" />
+                          <Image src={r.imageUrl} alt={r.name} width={32} height={32} className="w-8 h-8 rounded-lg object-cover border border-orange-200" />
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-200 to-amber-200 flex items-center justify-center">
                             <span className="text-orange-600 text-sm">🍽️</span>

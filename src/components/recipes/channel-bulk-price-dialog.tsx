@@ -268,6 +268,7 @@ export function ChannelBulkPriceDialog({
     try {
       setCurrentStep('applying')
       
+      // Prepare the price data with calculated prices and rounding applied
       const priceData = {
         recipeIds: selectedRecipeIds,
         updateMethod,
@@ -275,7 +276,16 @@ export function ChannelBulkPriceDialog({
         targetProfitAmount,
         roundingOption,
         customRounding,
-        reason: reason.trim()
+        reason: reason.trim(),
+        // Include the calculated prices with rounding already applied
+        priceUpdates: pricePreview.map(preview => ({
+          recipeId: preview.recipeId,
+          channelId: preview.channelId,
+          newPrice: preview.newPrice, // This already has rounding applied from calculatePrice function
+          currentPrice: preview.currentPrice,
+          priceChange: preview.priceChange,
+          percentageChange: preview.percentageChange
+        }))
       }
 
       onPriceUpdate(priceData)
@@ -536,10 +546,16 @@ export function ChannelBulkPriceDialog({
             {/* Price Preview Table */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Price Changes Preview
+                <CardTitle className="flex flex-row justify-between gap-2">
+                  <div className="flex items-center gap-2"> 
+                    <DollarSign className="h-5 w-5" />
+                    Price Changes Preview
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    COGS : {decimalSettings ? formatCurrency(recipes[0].cogsPerServing, decimalSettings) : `Rp ${recipes[0].cogsPerServing.toLocaleString('id-ID')}`}
+                  </div >
                 </CardTitle>
+              
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -563,9 +579,9 @@ export function ChannelBulkPriceDialog({
                         return (
                           <tr key={index} className="border-b hover:bg-gray-50">
                             <td className="p-2 font-medium">{preview.recipeName}</td>
-                            <td className="p-2">{preview.channelName}</td>
+                            <td className="p-2">{preview.channelName} ({commission.toFixed(1)}%)</td>
                             <td className="p-2 text-right text-orange-600 font-medium">
-                              {commission.toFixed(1)}%
+                              {decimalSettings ? formatCurrency(preview.newPrice * commission / 100, decimalSettings) : `Rp ${(preview.newPrice * commission / 100).toLocaleString('id-ID')}`}
                             </td>
                             <td className="p-2 text-right text-gray-600">
                               {decimalSettings ? formatCurrency(preview.currentPrice, decimalSettings) : `Rp ${preview.currentPrice.toLocaleString('id-ID')}`}

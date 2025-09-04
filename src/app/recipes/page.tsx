@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { DataTable, Column, PaginationInfo } from '@/components/ui/data-table'
 import { BulkActions } from '@/components/ui/bulk-actions'
-import { Plus, Edit, Trash2, ChefHat, Calculator, Heart, Filter } from 'lucide-react'
+import { Plus, Edit, Trash2, ChefHat, Calculator, Heart, Filter, MoreHorizontal } from 'lucide-react'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Info } from 'lucide-react'
 import { ImagePreview } from '@/components/ui/image-preview'
@@ -14,6 +14,21 @@ import { RecipeDialog } from '@/components/recipes/recipe-dialog'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
 import { ConfirmationDialog } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import toast from 'react-hot-toast'
 
 interface Recipe {
@@ -285,9 +300,10 @@ export default function RecipesPage() {
     try {
       const params = new URLSearchParams({ ids: ids.join(',') })
       window.open(`/api/recipes/export?${params}`, '_blank')
+      toast.success('Export resep berhasil dimulai')
     } catch (error) {
       console.error('Error bulk exporting recipes:', error)
-      alert('Gagal export resep yang dipilih')
+      toast.error('Gagal export resep yang dipilih')
     }
   }
 
@@ -316,6 +332,62 @@ export default function RecipesPage() {
     } catch (error) {
       console.error('Error bulk changing categories:', error)
       toast.error('Gagal mengubah kategori resep yang dipilih')
+    }
+  }
+
+  const handleBulkSetBasicRecipe = async (ids: string[], isBasic: boolean) => {
+    try {
+      const response = await fetch('/api/recipes/bulk-basic-recipe', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, isBasic })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        // Update local state
+        setRecipes(recipes.map(recipe => 
+          ids.includes(recipe.id) 
+            ? { ...recipe, canBeUsedAsIngredient: isBasic }
+            : recipe
+        ))
+        setSelectedItems([])
+        toast.success(result.message)
+      } else {
+        const error = await response.json()
+        toast.error(`Gagal mengubah status basic recipe: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk setting basic recipe:', error)
+      toast.error('Gagal mengubah status basic recipe yang dipilih')
+    }
+  }
+
+  const handleBulkSetFavorite = async (ids: string[], isFavorite: boolean) => {
+    try {
+      const response = await fetch('/api/recipes/bulk-favorite', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, isFavorite })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        // Update local state
+        setRecipes(recipes.map(recipe => 
+          ids.includes(recipe.id) 
+            ? { ...recipe, isFavorite: isFavorite }
+            : recipe
+        ))
+        setSelectedItems([])
+        toast.success(result.message)
+      } else {
+        const error = await response.json()
+        toast.error(`Gagal mengubah status favorit: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk setting favorite:', error)
+      toast.error('Gagal mengubah status favorit yang dipilih')
     }
   }
 
@@ -388,6 +460,30 @@ export default function RecipesPage() {
     }
   }
 
+  const handleSetBasicRecipe = async (recipeId: string, isBasic: boolean) => {
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ canBeUsedAsIngredient: isBasic }),
+      })
+
+      if (response.ok) {
+        setRecipes(prev => prev.map(r => 
+          r.id === recipeId ? { ...r, canBeUsedAsIngredient: isBasic } : r
+        ))
+        toast.success(isBasic ? 'Resep dijadikan Basic Recipe' : 'Resep diubah menjadi Regular Recipe')
+      } else {
+        toast.error('Gagal mengubah status Basic Recipe')
+      }
+    } catch (error) {
+      console.error('Error setting basic recipe:', error)
+      toast.error('Gagal mengubah status Basic Recipe')
+    }
+  }
+
   const columns: Column<Recipe>[] = [
     {
       key: 'name',
@@ -418,7 +514,7 @@ export default function RecipesPage() {
               </span>
             </div>
           )}
-          <div>
+          <div className="flex-1">
             <div className="font-medium text-gray-900">{recipe.name}</div>
             {recipe.description && (
               <div className="text-sm text-gray-500">{recipe.description}</div>
@@ -428,14 +524,58 @@ export default function RecipesPage() {
                 SKU: <span className="font-mono">{recipe.sku}</span>
               </div>
             )}
-            {recipe.category && (
-              <span 
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white mt-1"
-                style={{ backgroundColor: recipe.category.color }}
+            <div className="flex items-center gap-2 mt-1">
+              {/* Basic Recipe Icon */}
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <button 
+                    type="button"
+                    className="p-1 rounded-full transition-colors duration-200 hover:bg-gray-100"
+                    onClick={() => handleSetBasicRecipe(recipe.id, !recipe.canBeUsedAsIngredient)}
+                    aria-label={recipe.canBeUsedAsIngredient ? 'Basic Recipe - Dapat digunakan sebagai bahan' : 'Regular Recipe - Tidak dapat digunakan sebagai bahan'}
+                  >
+                    <ChefHat 
+                      className={`h-4 w-4 ${
+                        recipe.canBeUsedAsIngredient 
+                          ? 'text-purple-600' 
+                          : 'text-gray-400'
+                      }`} 
+                    />
+                  </button>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      {recipe.canBeUsedAsIngredient ? 'Basic Recipe' : 'Regular Recipe'}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {recipe.canBeUsedAsIngredient 
+                        ? 'Resep ini dapat digunakan sebagai bahan dalam resep lain. Berguna untuk resep dasar seperti saus, bumbu, atau komponen yang sering digunakan.'
+                        : 'Resep ini adalah resep standar yang tidak dapat digunakan sebagai bahan dalam resep lain.'
+                      }
+                    </p>
+                    {recipe.canBeUsedAsIngredient && (
+                      <p className="text-xs text-gray-500">
+                        Contoh: Saus tomat, bumbu dasar, atau kaldu dapat dijadikan Basic Recipe.
+                      </p>
+                    )}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+
+              {/* Favorite Icon */}
+              <button
+                onClick={() => handleToggleFavorite(recipe.id)}
+                className={`p-1 rounded-full transition-colors duration-200 ${
+                  recipe.isFavorite 
+                    ? 'text-yellow-500 hover:text-yellow-600' 
+                    : 'text-gray-400 hover:text-yellow-500'
+                }`}
+                aria-label={recipe.isFavorite ? 'Hapus dari favorit' : 'Tambah ke favorit'}
               >
-                {recipe.category.name}
-              </span>
-            )}
+                <Heart className={`h-4 w-4 ${recipe.isFavorite ? 'fill-current' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -456,6 +596,24 @@ export default function RecipesPage() {
       )
     },
     {
+      key: 'category',
+      header: 'Kategori',
+      render: (recipe) => (
+        <div className="text-sm">
+          {recipe.category ? (
+            <span 
+              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white"
+              style={{ backgroundColor: recipe.category.color }}
+            >
+              {recipe.category.name}
+            </span>
+          ) : (
+            <span className="text-gray-400 text-xs">Tidak ada kategori</span>
+          )}
+        </div>
+      )
+    },
+    {
       key: 'cogsPerServing',
       header: 'COGS per Unit',
       sortable: true,
@@ -467,68 +625,6 @@ export default function RecipesPage() {
             <div className="text-blue-600 text-xs">
               Total: {decimalSettings ? formatCurrency(recipe.totalCOGS, decimalSettings) : `Rp ${recipe.totalCOGS.toLocaleString('id-ID')}`}
             </div>
-        </div>
-      )
-    },
-
-    {
-      key: 'canBeUsedAsIngredient',
-      header: 'Basic Recipe',
-      render: (recipe) => (
-        <div className="flex items-center justify-center">
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <button 
-                type="button"
-                className="p-2 rounded-full transition-colors duration-200 hover:bg-gray-100"
-                aria-label={recipe.canBeUsedAsIngredient ? 'Basic Recipe - Dapat digunakan sebagai bahan' : 'Regular Recipe - Tidak dapat digunakan sebagai bahan'}
-              >
-                <ChefHat 
-                  className={`h-5 w-5 ${
-                    recipe.canBeUsedAsIngredient 
-                      ? 'text-purple-600' 
-                      : 'text-gray-400'
-                  }`} 
-                />
-              </button>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80">
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  {recipe.canBeUsedAsIngredient ? 'Basic Recipe' : 'Regular Recipe'}
-                </h4>
-                <p className="text-sm text-gray-600">
-                  {recipe.canBeUsedAsIngredient 
-                    ? 'Resep ini dapat digunakan sebagai bahan dalam resep lain. Berguna untuk resep dasar seperti saus, bumbu, atau komponen yang sering digunakan.'
-                    : 'Resep ini adalah resep standar yang tidak dapat digunakan sebagai bahan dalam resep lain.'
-                  }
-                </p>
-                {recipe.canBeUsedAsIngredient && (
-                  <p className="text-xs text-gray-500">
-                    Contoh: Saus tomat, bumbu dasar, atau kaldu dapat dijadikan Basic Recipe.
-                  </p>
-                )}
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        </div>
-      )
-    },
-    {
-      key: 'favorite',
-      header: 'Favorit',
-      render: (recipe) => (
-        <div className="flex items-center justify-center">
-          <button
-            onClick={() => handleToggleFavorite(recipe.id)}
-            className={`p-2 rounded-full transition-colors duration-200 ${
-              recipe.isFavorite 
-                ? 'text-yellow-500 hover:text-yellow-600' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
-          >
-            <Heart className={`h-5 w-5 ${recipe.isFavorite ? 'fill-current' : ''}`} />
-          </button>
         </div>
       )
     },
@@ -545,14 +641,48 @@ export default function RecipesPage() {
           >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleDelete(recipe.id)}
-            className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 w-10 sm:h-8 sm:w-8 p-0"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {/* Set Basic Recipe */}
+              <DropdownMenuItem
+                onClick={() => handleSetBasicRecipe(recipe.id, !recipe.canBeUsedAsIngredient)}
+                className="text-purple-600 focus:text-purple-700 focus:bg-purple-50"
+              >
+                <ChefHat className="h-4 w-4 mr-2" />
+                {recipe.canBeUsedAsIngredient ? 'Unset Basic Recipe' : 'Set Basic Recipe'}
+              </DropdownMenuItem>
+
+              {/* Set Favorite */}
+              <DropdownMenuItem
+                onClick={() => handleToggleFavorite(recipe.id)}
+                className="text-yellow-600 focus:text-yellow-700 focus:bg-yellow-50"
+              >
+                <Heart className="h-4 w-4 mr-2" />
+                {recipe.isFavorite ? 'Unset Favorite' : 'Set Favorite'}
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* Delete */}
+              <DropdownMenuItem
+                onClick={() => handleDelete(recipe.id)}
+                className="text-red-600 focus:text-red-700 focus:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )
     }
@@ -594,68 +724,14 @@ export default function RecipesPage() {
               <Plus className="h-4 w-4" />
               Tambah Resep
             </Button>
-            <Button variant="outline" onClick={() => window.location.href = '/recipes/price-manager'} className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => window.location.href = '/price/price-manager'} className="flex items-center gap-2">
               <Calculator className="h-4 w-4" />
               Price Manager
             </Button>
           </div>
         </div>
 
-        {/* Filter Controls */}
-        <div style={{ 
-              background: "var(--color-panel-solid)"
-            }} 
-            className="rounded-lg border border-gray-200 p-4"
-        >
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Filter:</span>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              {/* Favorite Filter */}
-              <button
-                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                  showFavoritesOnly
-                    ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                }`}
-              >
-                <Heart className={`h-4 w-4 ${showFavoritesOnly ? 'fill-current text-yellow-600' : ''}`} />
-                Favorit
-              </button>
 
-              {/* Category Filter */}
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Semua Kategori</option>
-                {categories?.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Clear Filters */}
-              {(showFavoritesOnly || selectedCategory) && (
-                <button
-                  onClick={() => {
-                    setShowFavoritesOnly(false)
-                    setSelectedCategory('')
-                  }}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200"
-                >
-                  Hapus Filter
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
 
         <DataTable
           data={recipes}
@@ -673,6 +749,63 @@ export default function RecipesPage() {
           emptyState={emptyState}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
+          filterControls={
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filter:</span>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                {/* Favorite Filter */}
+                <button
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    showFavoritesOnly
+                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                  }`}
+                >
+                  <Heart className={`h-4 w-4 ${showFavoritesOnly ? 'fill-current text-yellow-600' : ''}`} />
+                  Favorit
+                </button>
+
+                {/* Category Filter */}
+                <Select value={selectedCategory || 'all'} onValueChange={(value) => setSelectedCategory(value === 'all' ? '' : value)}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Semua Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Kategori</SelectItem>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          {category.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Clear Filters */}
+                {(showFavoritesOnly || selectedCategory) && (
+                  <button
+                    onClick={() => {
+                      setShowFavoritesOnly(false)
+                      setSelectedCategory('')
+                    }}
+                    className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    Hapus Filter
+                  </button>
+                )}
+              </div>
+            </div>
+          }
           bulkActions={
             <BulkActions
               data={recipes}
@@ -681,6 +814,8 @@ export default function RecipesPage() {
               onBulkDelete={handleBulkDelete}
               onBulkExport={handleBulkExport}
               onBulkCategoryChange={handleBulkCategoryChange}
+              onBulkSetBasicRecipe={handleBulkSetBasicRecipe}
+              onBulkSetFavorite={handleBulkSetFavorite}
               categories={categories || []}
               loading={loading}
             />
@@ -731,11 +866,14 @@ export default function RecipesPage() {
                           {recipe.category.name}
                         </span>
                       )}
+                      
+                      {/* Basic Recipe Icon */}
                       <HoverCard>
                         <HoverCardTrigger asChild>
                           <button 
                             type="button"
                             className="p-1 rounded-full transition-colors duration-200 hover:bg-gray-100"
+                            onClick={() => handleSetBasicRecipe(recipe.id, !recipe.canBeUsedAsIngredient)}
                             aria-label={recipe.canBeUsedAsIngredient ? 'Basic Recipe - Dapat digunakan sebagai bahan' : 'Regular Recipe - Tidak dapat digunakan sebagai bahan'}
                           >
                             <ChefHat 
@@ -766,6 +904,19 @@ export default function RecipesPage() {
                           </div>
                         </HoverCardContent>
                       </HoverCard>
+                      
+                      {/* Favorite Icon */}
+                      <button
+                        onClick={() => handleToggleFavorite(recipe.id)}
+                        className={`p-1 rounded-full transition-colors duration-200 ${
+                          recipe.isFavorite 
+                            ? 'text-yellow-500 hover:text-yellow-600' 
+                            : 'text-gray-400 hover:text-yellow-500'
+                        }`}
+                        aria-label={recipe.isFavorite ? 'Hapus dari favorit' : 'Tambah ke favorit'}
+                      >
+                        <Heart className={`h-4 w-4 ${recipe.isFavorite ? 'fill-current' : ''}`} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -793,14 +944,48 @@ export default function RecipesPage() {
                 >
                   <Edit className="h-4 w-4 mr-2" /> Edit
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(recipe.id)}
-                  className="flex-1 text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" /> Hapus
-                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="px-3"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {/* Set Basic Recipe */}
+                    <DropdownMenuItem
+                      onClick={() => handleSetBasicRecipe(recipe.id, !recipe.canBeUsedAsIngredient)}
+                      className="text-purple-600 focus:text-purple-700 focus:bg-purple-50"
+                    >
+                      <ChefHat className="h-4 w-4 mr-2" />
+                      {recipe.canBeUsedAsIngredient ? 'Unset Basic Recipe' : 'Set Basic Recipe'}
+                    </DropdownMenuItem>
+
+                    {/* Set Favorite */}
+                    <DropdownMenuItem
+                      onClick={() => handleToggleFavorite(recipe.id)}
+                      className="text-yellow-600 focus:text-yellow-700 focus:bg-yellow-50"
+                    >
+                      <Heart className="h-4 w-4 mr-2" />
+                      {recipe.isFavorite ? 'Unset Favorite' : 'Set Favorite'}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Delete */}
+                    <DropdownMenuItem
+                      onClick={() => handleDelete(recipe.id)}
+                      className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Hapus
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           )}

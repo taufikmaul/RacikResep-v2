@@ -61,6 +61,8 @@ model Category {
   ingredients Ingredient[]
   recipes     Recipe[]
 
+  @@index([businessId])
+  @@index([businessId, type])
   @@map("categories")
 }
 
@@ -78,6 +80,8 @@ model Unit {
   recipeYields        Recipe[]
   business            Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
+  @@index([businessId, type])
   @@map("units")
 }
 
@@ -103,6 +107,10 @@ model Ingredient {
   category          Category?                @relation(fields: [categoryId], references: [id])
   recipeIngredients RecipeIngredient[]
 
+  @@index([businessId])
+  @@index([businessId, categoryId])
+  @@index([businessId, createdAt])
+  @@index([businessId, costPerUnit])
   @@map("ingredients")
 }
 
@@ -121,6 +129,9 @@ model IngredientPriceHistory {
   business         Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
   ingredient       Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
+  @@index([ingredientId, changeDate])
+  @@index([businessId, changeDate])
   @@map("ingredient_price_history")
 }
 
@@ -159,6 +170,13 @@ model Recipe {
   category              Category?            @relation(fields: [categoryId], references: [id])
   business              Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
+  @@index([businessId, profitMargin])
+  @@index([businessId, totalCOGS])
+  @@index([businessId, createdAt])
+  @@index([businessId, categoryId])
+  @@index([businessId, isFavorite])
+  @@index([businessId, canBeUsedAsIngredient])
   @@map("recipes")
 }
 
@@ -178,6 +196,9 @@ model RecipePriceHistory {
   business         Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
+  @@index([recipeId, changeDate])
+  @@index([businessId, changeDate])
   @@map("recipe_price_history")
 }
 
@@ -194,6 +215,8 @@ model RecipeIngredient {
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
+  @@index([recipeId])
+  @@index([ingredientId])
   @@map("recipe_ingredients")
 }
 
@@ -215,12 +238,14 @@ model SalesChannel {
   id            String         @id @default(cuid())
   name          String
   commission    Float          @default(0)
+  icon          String?        @default("other")
   businessId    String
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   channelPrices ChannelPrice[]
   business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
+  @@index([businessId])
   @@map("sales_channels")
 }
 
@@ -239,6 +264,8 @@ model ChannelPrice {
   channel      SalesChannel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@unique([recipeId, channelId])
+  @@index([recipeId])
+  @@index([channelId])
   @@map("channel_prices")
 }
 

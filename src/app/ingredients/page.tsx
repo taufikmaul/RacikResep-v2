@@ -10,9 +10,17 @@ import { Plus, Edit, Trash2, Package, Upload, Download, FileText } from 'lucide-
 import { IngredientDialog } from '@/components/ingredients/ingredient-dialog'
 import { IngredientImportDialog } from '@/components/ingredients/ingredient-import-dialog'
 import { PriceUpdateDialog } from '@/components/ingredients/price-update-dialog'
+import { CompactCsvUI } from '@/components/ingredients/compact-csv-ui'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
 import { ConfirmationDialog } from '@/components/ui/alert-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import toast from 'react-hot-toast'
 
 interface Ingredient {
@@ -70,6 +78,7 @@ export default function IngredientsPage() {
   const [updatingIngredient, setUpdatingIngredient] = useState<Ingredient | null>(null)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string }>>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -91,7 +100,8 @@ export default function IngredientsPage() {
         limit: pagination.limit.toString(),
         sortBy,
         sortOrder,
-        ...(searchTerm && { search: searchTerm })
+        ...(searchTerm && { search: searchTerm }),
+        ...(selectedCategory && { category: selectedCategory })
       })
       
       const response = await fetch(`/api/ingredients?${params}`)
@@ -124,7 +134,7 @@ export default function IngredientsPage() {
       fetchIngredients()
       fetchCategories()
     }
-  }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm])
+  }, [session, pagination.page, pagination.limit, sortBy, sortOrder, searchTerm, selectedCategory])
 
   const handleDelete = (id: string) => {
     setConfirmDialog({
@@ -241,10 +251,16 @@ export default function IngredientsPage() {
     try {
       const params = new URLSearchParams({ ids: ids.join(',') })
       window.open(`/api/ingredients/export?${params}`, '_blank')
+      toast.success('Export bahan berhasil dimulai')
     } catch (error) {
       console.error('Error bulk exporting ingredients:', error)
-      alert('Gagal export bahan yang dipilih')
+      toast.error('Gagal export bahan yang dipilih')
     }
+  }
+
+  const handleCategoryManagement = () => {
+    // Navigate to category management page or open category dialog
+    window.location.href = '/settings?tab=categories'
   }
 
   const handleBulkCategoryChange = async (ids: string[], categoryId: string) => {
@@ -340,7 +356,7 @@ export default function IngredientsPage() {
     {
       key: 'sku',
       header: 'SKU',
-      sortable: true,
+      sortable: false,
       render: (ingredient) => (
         <div className="text-sm">
           {ingredient.sku ? (
@@ -387,7 +403,7 @@ export default function IngredientsPage() {
     {
       key: 'costPerUnit',
       header: 'Biaya per Unit',
-      sortable: true,
+      sortable: false,
       render: (ingredient) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
@@ -402,7 +418,7 @@ export default function IngredientsPage() {
     {
       key: 'conversionFactor',
       header: 'Faktor Konversi',
-      sortable: true,
+      sortable: false,
       render: (ingredient) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
@@ -417,7 +433,7 @@ export default function IngredientsPage() {
     {
       key: 'usageCount',
       header: 'Dipakai di Resep',
-      sortable: false,
+      sortable: true,
       render: (ingredient) => (
         <div className="text-sm font-medium text-gray-900">{ingredient.usageCount ?? 0} resep</div>
       )
@@ -491,27 +507,13 @@ export default function IngredientsPage() {
             <p className="text-gray-600">Kelola inventori bahan baku Anda</p>
           </div>
           <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
-            <Button
-              variant="outline"
-              onClick={() => window.open('/api/ingredients/template', '_blank')}
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
-              <FileText className="h-4 w-4" /> Template CSV
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.open('/api/ingredients/export', '_blank')}
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
-              <Download className="h-4 w-4" /> Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIsImportOpen(true)}
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
-              <Upload className="h-4 w-4" /> Import CSV
-            </Button>
+            <CompactCsvUI
+              onTemplateDownload={() => window.open('/api/ingredients/template', '_blank')}
+              onExportAll={() => window.open('/api/ingredients/export', '_blank')}
+              onImport={() => setIsImportOpen(true)}
+              onCategoryManagement={handleCategoryManagement}
+              className="w-full sm:w-auto"
+            />
             <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Tambah Bahan
@@ -535,6 +537,47 @@ export default function IngredientsPage() {
           emptyState={emptyState}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
+          filterControls={
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filter:</span>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                {/* Category Filter */}
+                <Select value={selectedCategory || 'all'} onValueChange={(value) => setSelectedCategory(value === 'all' ? '' : value)}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Semua Kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Kategori</SelectItem>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          {category.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Clear Filters */}
+                {selectedCategory && (
+                  <button
+                    onClick={() => setSelectedCategory('')}
+                    className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    Hapus Filter
+                  </button>
+                )}
+              </div>
+            </div>
+          }
           bulkActions={
             <BulkActions
               data={ingredients}

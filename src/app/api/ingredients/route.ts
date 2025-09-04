@@ -27,8 +27,18 @@ export async function GET(request: NextRequest) {
     // Search parameter
     const search = searchParams.get('search') || ''
     
+    // Category filter parameter
+    const category = searchParams.get('category') || ''
+    
     // Build where clause
     const whereClause: any = { businessId }
+    
+    // Add category filter
+    if (category) {
+      whereClause.categoryId = category
+    }
+    
+    // Add search filter
     if (search) {
       whereClause.OR = [
         { name: { contains: search } },
@@ -68,6 +78,8 @@ export async function GET(request: NextRequest) {
       orderByClause.usageUnit = { name: sortOrder }
     } else if (sortBy === 'sku') {
       orderByClause.sku = sortOrder
+    } else if (sortBy === 'usageCount') {
+      orderByClause.recipeIngredients = { _count: sortOrder }
     } else {
       orderByClause[sortBy] = sortOrder
     }

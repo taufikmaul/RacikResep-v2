@@ -18,7 +18,7 @@ export async function PUT(
     const userId = session.user.id
     const { id: channelId } = await params
 
-    const { name, commission } = await request.json()
+    const { name, commission, icon } = await request.json()
 
     if (!name || commission === undefined) {
       return NextResponse.json(
@@ -50,7 +50,8 @@ export async function PUT(
       where: { id: channelId },
       data: {
         name,
-        commission
+        commission,
+        icon: icon || 'other'
       }
     })
 

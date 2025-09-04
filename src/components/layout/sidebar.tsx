@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -42,7 +43,7 @@ export function AppSidebar() {
             logo: data?.logo
           })
         }
-      } catch (_) {
+      } catch {
         // Silent fail
       }
     }
@@ -51,7 +52,7 @@ export function AppSidebar() {
 
   // Auto-expand price manager menu if user is on a price manager page
   useEffect(() => {
-    if (pathname.startsWith('/recipes/price-manager') || pathname.startsWith('/recipes/channel-price-manager')) {
+    if (pathname.startsWith('/price/price-manager') || pathname.startsWith('/price/channel-price-manager')) {
       setExpandedMenus(prev => prev.includes('price-manager') ? prev : [...prev, 'price-manager'])
     }
   }, [pathname])
@@ -65,8 +66,8 @@ export function AppSidebar() {
       label: 'Price Manager',
       icon: '💰',
       submenu: [
-        { href: '/recipes/price-manager', label: 'Base Price Manager' },
-        { href: '/recipes/channel-price-manager', label: 'Channel Price Manager' }
+        { href: '/price/price-manager', label: 'Base Price Manager' },
+        { href: '/price/channel-price-manager', label: 'Channel Price Manager' }
       ]
     },
     { href: '/subscription', label: 'Subscription', icon: '👑' },
@@ -96,9 +97,11 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 p-4 border-b border-border">
           <div className="flex-shrink-0">
             {bizInfo?.logo ? (
-              <img
+              <Image
                 src={bizInfo.logo}
                 alt="Business Logo"
+                width={40}
+                height={40}
                 className="h-10 w-10 rounded-lg object-cover"
               />
             ) : (

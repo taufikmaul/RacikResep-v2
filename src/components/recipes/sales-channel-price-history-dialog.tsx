@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useDecimalSettings } from '@/hooks/useDecimalSettings'
 import { formatCurrency } from '@/lib/utils'
+import { SALES_CHANNEL_ICONS } from '@/components/ui/sales-channel-icon-selector'
 
 interface ChannelPriceHistory {
   id: string
@@ -55,7 +56,13 @@ export function SalesChannelPriceHistoryDialog({
   const { settings: decimalSettings } = useDecimalSettings()
   const [loading, setLoading] = useState(false)
   const [priceHistory, setPriceHistory] = useState<ChannelPriceHistory[]>([])
-  const [channels, setChannels] = useState<{id: string, name: string}[]>([])
+  const [channels, setChannels] = useState<{id: string, name: string, icon: string}[]>([])
+
+  // Helper function to get sales channel icon
+  const getSalesChannelIcon = (channelIcon: string) => {
+    const iconData = SALES_CHANNEL_ICONS.find(icon => icon.id === channelIcon)
+    return iconData || SALES_CHANNEL_ICONS.find(icon => icon.id === 'other')
+  }
 
   useEffect(() => {
     if (isOpen && recipeId) {
@@ -276,13 +283,39 @@ export function SalesChannelPriceHistoryDialog({
 
             {/* Detailed History by Channel */}
             <Tabs defaultValue={channels[0]?.id} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
-                {channels.map((channel) => (
-                  <TabsTrigger key={channel.id} value={channel.id}>
-                    {channel.name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Vertical Tabs List */}
+                <div className="w-full lg:w-48">
+                  <TabsList className="flex flex-col h-auto w-full lg:w-48 p-1 bg-gray-100 rounded-lg">
+                    <div className="max-h-96 overflow-y-auto w-full">
+                      {channels.map((channel) => {
+                        const iconData = getSalesChannelIcon(channel.icon)
+                        return (
+                          <TabsTrigger 
+                            key={channel.id} 
+                            value={channel.id}
+                            className="w-full justify-start p-2 h-auto mb-1 last:mb-0"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              {iconData && (
+                                <div 
+                                  className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0"
+                                  style={{ backgroundColor: iconData.color }}
+                                >
+                                  {iconData.icon}
+                                </div>
+                              )}
+                              <span className="truncate text-sm">{channel.name}</span>
+                            </div>
+                          </TabsTrigger>
+                        )
+                      })}
+                    </div>
+                  </TabsList>
+                </div>
+                
+                {/* Tab Content */}
+                <div className="flex-1">
               
               {channels.map((channel) => {
                 const channelHistory = historyByChannel[channel.id]?.history || []
@@ -291,7 +324,17 @@ export function SalesChannelPriceHistoryDialog({
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Store className="h-5 w-5" />
+                          {(() => {
+                            const iconData = getSalesChannelIcon(channel.icon)
+                            return (
+                              <div 
+                                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs"
+                                style={{ backgroundColor: iconData?.color || '#6B7280' }}
+                              >
+                                {iconData?.icon || '🏢'}
+                              </div>
+                            )
+                          })()}
                           {channel.name} - Price History
                         </CardTitle>
                       </CardHeader>
@@ -380,6 +423,8 @@ export function SalesChannelPriceHistoryDialog({
                   </TabsContent>
                 )
               })}
+                </div>
+              </div>
             </Tabs>
           </>
         )}
